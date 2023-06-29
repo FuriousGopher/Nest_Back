@@ -1,5 +1,4 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -11,7 +10,7 @@ export class UsersController {
   }
   @Post()
   createUser(@Body() inputModel: CreateUserInputModelType) {
-    return [{ id: uuidv4(), name: inputModel.name, age: inputModel.age }];
+    return this.userService.createUser(inputModel);
   }
   @Get(':id')
   getUser(@Param('id') id: string) {
@@ -19,7 +18,7 @@ export class UsersController {
   }
 }
 
-type CreateUserInputModelType = {
+export type CreateUserInputModelType = {
   name: string;
   age: number;
 };
