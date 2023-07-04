@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UserQueryParamsDto } from './dto/UserQueryParams.dto';
+import { UserQueryParamsDto } from './dto/userQueryParams.dto';
 
 @Controller('users')
 export class UsersController {
@@ -21,10 +21,6 @@ export class UsersController {
   @Post()
   createUser(@Body() inputModel: CreateUserDto) {
     return this.userService.createUser(inputModel);
-  }
-  @Get(':id')
-  getUser(@Param('id') id: string) {
-    return this.userService.findUsers(id);
   }
 
   @Delete(':id')

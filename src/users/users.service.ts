@@ -9,19 +9,28 @@ export class UsersService {
     @Inject(UsersRepository)
     protected userRepository: UsersRepository,
   ) {}
-  findUsers(id: string) {
-    this.userRepository.findUsers(id);
-  }
 
   getAllUsers(queryParams) {
     return this.userRepository.getAllUsers(queryParams);
   }
 
   async createUser(createUserDto: CreateUserDto) {
-    const passwordSalt = await genSalt(10);
-    const passwordHash = await hash(createUserDto.password, passwordSalt);
-    const newUser = this.userRepository.createUser(createUserDto, passwordHash);
-    return newUser;
+    try {
+      const passwordSalt = await genSalt(10);
+      const passwordHash = await hash(createUserDto.password, passwordSalt);
+      const newUser = await this.userRepository.createUser(
+        createUserDto,
+        passwordHash,
+      );
+      return newUser;
+    } catch (error) {
+      console.error('An error occurred while creating a password:', error);
+
+      return {
+        success: false,
+        message: 'An error occurred while creating a password.',
+      };
+    }
   }
 
   async deleteUser(id: string) {

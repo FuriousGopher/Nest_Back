@@ -7,25 +7,24 @@ import {
 } from '@nestjs/class-validator';
 
 export class CreateUserDto {
-  @IsString() //TODO check how its work error msg
+  @IsString()
   @Matches(/^[a-zA-Z0-9_-]*$/, {
-    message:
-      'the first character of the username must not be a number. Username must contains at least 4 characters',
+    message: 'Name should content only letters and numbers',
   })
   @MinLength(3, {
-    message: 'min 3',
+    message: 'Name min 3 char',
   })
   @MaxLength(10, {
-    message: 'max 10',
+    message: 'Name max 10 char',
   })
   login: string;
 
   @IsString()
   @MinLength(6, {
-    message: 'min 6',
+    message: 'Password min 6 char',
   })
   @MaxLength(20, {
-    message: 'max 20',
+    message: 'Password max 20 char',
   })
   password: string;
   @IsEmail()
