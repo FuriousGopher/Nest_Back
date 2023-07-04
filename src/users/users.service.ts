@@ -1,26 +1,30 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { UsersRepository } from './users.repository';
-import { CreateUserInputModelType } from './users.controller';
-import { User, UserDocument } from '../schemas/users.schema';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { genSalt, hash } from 'bcrypt';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @Inject(UsersRepository)
     protected userRepository: UsersRepository,
   ) {}
   findUsers(id: string) {
     this.userRepository.findUsers(id);
   }
 
-  createUser(createUserDto: CreateUserInputModelType) {
-    const createdUser = new this.userModel(createUserDto);
-    createdUser.save();
-    return {
-      name: createdUser.name,
-      age: createdUser.age,
-    };
+  getAllUsers(queryParams) {
+    return this.userRepository.getAllUsers(queryParams);
+  }
+
+  async createUser(createUserDto: CreateUserDto) {
+    const passwordSalt = await genSalt(10);
+    const passwordHash = await hash(createUserDto.password, passwordSalt);
+    const newUser = this.userRepository.createUser(createUserDto, passwordHash);
+    return newUser;
+  }
+
+  async deleteUser(id: string) {
+    return this.userRepository.deleteUser(id);
   }
 }
