@@ -23,6 +23,6 @@ export const BlogSchema = SchemaFactory.createForClass(Blog);
 
 BlogSchema.pre<Blog>('save', function (next) {
   this.createdAt = new Date().toISOString();
-  this.isMembership = true;
+  this.isMembership = false;
   next();
 });
