@@ -12,9 +12,10 @@
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
-    "strictNullChecks": false,
+    "strictNullChecks": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false
   }

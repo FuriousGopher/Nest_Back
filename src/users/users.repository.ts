@@ -17,12 +17,6 @@ export class UsersRepository {
           login: createUserDto.login,
           email: createUserDto.email,
           passwordHash: passwordHash,
-          isMembership: false,
-        },
-        emailConfirmation: {
-          confirmationCode: null,
-          expirationDate: null,
-          isConfirmed: false,
         },
       });
 
@@ -115,7 +109,6 @@ export class UsersRepository {
     if (!userExists) {
       throw new NotFoundException('User not found');
     }
-    const deletedUser = await this.userModel.findByIdAndDelete(id).exec();
-    return deletedUser;
+    await this.userModel.findByIdAndDelete(id).exec();
   }
 }

@@ -1,14 +1,14 @@
 import { Prop, Schema, SchemaFactory, raw } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 import { add } from 'date-fns';
-import { uuid } from 'uuidv4';
+import { v4 } from 'uuid';
 
 export type UserDocument = HydratedDocument<User>;
 
 @Schema()
 export class User {
   @Prop()
-  id: string;
+  _id: string;
 
   @Prop(
     raw({
@@ -44,10 +44,12 @@ export const UserSchema = SchemaFactory.createForClass(User);
 
 UserSchema.pre<User>('save', function (next) {
   this.accountData.createdAt = new Date().toISOString();
-  this.emailConfirmation.confirmationCode = uuid();
-  (this.emailConfirmation.expirationDate = add(new Date(), {
+  this.accountData.isMembership = false;
+  this.emailConfirmation.confirmationCode = v4();
+  this.emailConfirmation.expirationDate = add(new Date(), {
     hours: 1,
     minutes: 3,
-  })),
-    next();
+  });
+  this.emailConfirmation.isConfirmed = true;
+  next();
 });

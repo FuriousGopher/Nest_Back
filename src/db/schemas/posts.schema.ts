@@ -1,23 +1,12 @@
 import { Prop, raw, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { v4 } from 'uuid';
 
 export type PostDocument = HydratedDocument<Post>;
 
 @Schema()
-class UsersLikes {
-  @Prop()
-  addedAt: string;
-  @Prop()
-  userId: string;
-  @Prop()
-  userLogin: string;
-  @Prop()
-  likeStatus: string;
-}
-
-@Schema()
 export class Post {
-  @Prop() id: string;
+  @Prop() _id: string;
   @Prop() title: string;
   @Prop() shortDescription: string;
   @Prop() content: string;
@@ -28,19 +17,40 @@ export class Post {
     raw({
       likesCount: { type: Number },
       dislikesCount: { type: Number },
-      users: { type: Array },
+      users: {
+        type: {
+          addedAt: { type: String },
+          userId: { type: String },
+          userLogin: { type: String },
+          likeStatus: { type: String },
+        },
+      },
     }),
   )
   likesInfo: {
     likesCount: number;
     dislikesCount: number;
-    users: UsersLikes[];
+    users: {
+      addedAt: string;
+      userId: string;
+      userLogin: string;
+      likeStatus: string;
+    };
   };
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);
 
 PostSchema.pre<Post>('save', function (next) {
+  this._id = v4();
   this.createdAt = new Date().toISOString();
+  this.likesInfo.likesCount = 0;
+  this.likesInfo.dislikesCount = 0;
+  this.likesInfo.users = {
+    addedAt: '',
+    userId: '',
+    userLogin: '',
+    likeStatus: '',
+  };
   next();
 });

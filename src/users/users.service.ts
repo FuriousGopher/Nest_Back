@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { UsersRepository } from './users.repository';
-import { genSalt, hash } from 'bcrypt';
+import { genSalt, hash } from 'bcryptjs';
 import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()

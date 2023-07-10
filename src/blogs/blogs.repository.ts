@@ -1,11 +1,10 @@
-import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Blog, BlogDocument } from '../db/schemas/blogs.schema';
 import { Model } from 'mongoose';
 import { BlogsQueryParamsDto } from './dto/blogs-query-params.dto';
 import { BlogsResponseDto } from './dto/blogsResponse.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
-
 @Injectable()
 export class BlogsRepository {
   constructor(@InjectModel(Blog.name) private blogModel: Model<BlogDocument>) {}
@@ -98,28 +97,19 @@ export class BlogsRepository {
     }
   }
 
-  async findOne(id: string) {
-    try {
-      const blog = await this.blogModel.findById(id).exec();
-      if (!blog) {
-        throw new NotFoundException('Blog not found');
-      }
-      return {
-        id: blog._id,
-        name: blog.name,
-        description: blog.description,
-        websiteUrl: blog.websiteUrl,
-        createdAt: blog.createdAt,
-        isMembership: blog.isMembership,
-      };
-    } catch (e) {
-      console.error('An error occurred while getting blog ', e);
-
-      return {
-        success: false,
-        message: 'An error occurred while getting blog.',
-      };
+  async findOne(_id: string) {
+    const blog = await this.blogModel.findById(_id).exec();
+    if (!blog) {
+      throw new NotFoundException('Blog not found');
     }
+    return {
+      id: blog._id,
+      name: blog.name,
+      description: blog.description,
+      websiteUrl: blog.websiteUrl,
+      createdAt: blog.createdAt,
+      isMembership: blog.isMembership,
+    };
   }
 
   async updateOne(id: string, updateBlogDto: UpdateBlogDto) {

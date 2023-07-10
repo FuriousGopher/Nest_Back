@@ -1,26 +1,39 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { PostsRepository } from './posts.repository';
+import { BlogsRepository } from '../blogs/blogs.repository';
 
 @Injectable()
 export class PostsService {
-  create(createPostDto: CreatePostDto) {
-    return 'This action adds a new post';
+  constructor(
+    @Inject(PostsRepository)
+    protected postsRepository: PostsRepository,
+    @Inject(BlogsRepository)
+    protected blogsRepository: BlogsRepository,
+  ) {}
+
+  async create(createPostDto: CreatePostDto) {
+    const blogName = await this.blogsRepository.findOne(createPostDto.blogId);
+    if (!blogName) {
+      throw new NotFoundException('Blog not found');
+    }
+    return this.postsRepository.create(createPostDto, blogName.name);
   }
 
-  findAll() {
-    return `This action returns all posts`;
+  findAll(queryParams) {
+    return this.postsRepository.findAllPosts(queryParams);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} post`;
+  findOne(id: string) {
+    return this.postsRepository.findOne(id);
   }
 
-  update(id: number, updatePostDto: UpdatePostDto) {
-    return `This action updates a #${id} post`;
+  updateOne(id: string, updatePostDto: UpdatePostDto) {
+    return this.postsRepository.updateOne(id, updatePostDto);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} post`;
+  remove(id: string) {
+    return this.postsRepository.remove(id);
   }
 }

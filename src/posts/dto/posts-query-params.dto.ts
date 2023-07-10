@@ -1,5 +1,4 @@
-export class BlogsQueryParamsDto {
-  searchNameTerm = '';
+export class PostsQueryParamsDto {
   sortBy = 'createdAt';
   sortDirection = 'desc';
   pageNumber = 1;

@@ -6,10 +6,13 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
+  HttpCode,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
-import { UpdatePostDto } from './dto/update-post.dto';
+import { UpdatePostDto } from"./dto/update-post.dto"';
+import { PostsQueryParamsDto } from"./dto/posts-query-params.dto"';
 
 @Controller('posts')
 export class PostsController {
@@ -21,22 +24,23 @@ export class PostsController {
   }
 
   @Get()
-  findAll() {
-    return this.postsService.findAll();
+  findAll(@Query() queryParams: PostsQueryParamsDto) {
+    return this.postsService.findAll(queryParams);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.postsService.findOne(+id);
+    return this.postsService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
-    return this.postsService.update(+id, updatePostDto);
+    return this.postsService.updateOne(id, updatePostDto);
   }
 
-  @Delete(':id')
+  @HttpCode(204)
+  @Delete(":id")
   remove(@Param('id') id: string) {
-    return this.postsService.remove(+id);
+    return this.postsService.remove(id);
   }
 }

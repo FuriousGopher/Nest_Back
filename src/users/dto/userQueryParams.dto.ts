@@ -3,6 +3,6 @@ export class UserQueryParamsDto {
   sortDirection = 'desc';
   pageNumber = 1;
   pageSize = 10;
-  searchLoginTerm: string = null;
-  searchEmailTerm: string = null;
+  searchLoginTerm = null;
+  searchEmailTerm = null;
 }
