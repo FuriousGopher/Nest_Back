@@ -21,8 +21,8 @@ export class PostsService {
     return this.postsRepository.create(createPostDto, blogName.name);
   }
 
-  findAll(queryParams) {
-    return this.postsRepository.findAllPosts(queryParams);
+  async findAll(queryParams) {
+    return await this.postsRepository.findAllPosts(queryParams);
   }
 
   findOne(id: string) {

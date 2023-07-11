@@ -42,40 +42,40 @@ export class UsersRepository {
     queryParams: UserQueryParamsDto,
   ): Promise<UsersResponseDto | { message: string } | { success: boolean }> {
     try {
-      const {
-        sortBy = 'createdAt',
-        sortDirection = 'desc',
-        pageNumber = 1,
-        pageSize = 10,
-        searchLoginTerm = null,
-        searchEmailTerm = null,
-      } = queryParams;
+      const query = {
+        pageSize: Number(queryParams.pageSize) || 10,
+        pageNumber: Number(queryParams.pageNumber) || 1,
+        sortBy: queryParams.sortBy ?? 'createdAt',
+        sortDirection: queryParams.sortDirection ?? 'desc',
+        searchEmailTerm: queryParams.searchEmailTerm ?? null,
+        searchLoginTerm: queryParams.searchLoginTerm ?? null,
+      };
 
-      const skipCount = (pageNumber - 1) * pageSize;
+      const skipCount = (query.pageNumber - 1) * query.pageSize;
       const filter: any = {};
 
-      if (searchLoginTerm) {
+      if (query.searchLoginTerm) {
         filter['accountData.login'] = {
-          $regex: searchLoginTerm,
+          $regex: query.searchLoginTerm,
           $options: 'i',
         };
       }
 
-      if (searchEmailTerm) {
+      if (query.searchEmailTerm) {
         filter['accountData.email'] = {
-          $regex: searchEmailTerm,
+          $regex: query.searchEmailTerm,
           $options: 'i',
         };
       }
 
       const totalCount = await this.userModel.countDocuments(filter).exec();
-      const totalPages = Math.ceil(totalCount / pageSize);
+      const totalPages = Math.ceil(totalCount / query.pageSize);
 
       const users = await this.userModel
         .find(filter)
-        .sort({ [sortBy]: sortDirection === 'desc' ? -1 : 1 })
+        .sort({ [query.sortBy]: query.sortDirection === 'desc' ? -1 : 1 })
         .skip(skipCount)
-        .limit(pageSize)
+        .limit(query.pageSize)
         .exec();
 
       const userViewModels = users.map((user) => ({
@@ -85,15 +85,13 @@ export class UsersRepository {
         createdAt: user.accountData.createdAt,
       }));
 
-      const usersResponse: UsersResponseDto = {
+      return {
         pagesCount: totalPages,
-        page: pageNumber,
-        pageSize: pageSize,
+        page: query.pageNumber,
+        pageSize: query.pageSize,
         totalCount: totalCount,
         items: userViewModels,
       };
-
-      return usersResponse;
     } catch (e) {
       console.error('An error occurred while getting all users', e);
 

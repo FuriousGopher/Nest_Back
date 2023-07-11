@@ -5,9 +5,15 @@ import { Model } from 'mongoose';
 import { BlogsQueryParamsDto } from './dto/blogs-query-params.dto';
 import { BlogsResponseDto } from './dto/blogsResponse.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
+import { Post, PostDocument } from '../db/schemas/posts.schema';
+import { PostsResponseDto } from '../posts/dto/postsResponse.dto';
+
 @Injectable()
 export class BlogsRepository {
-  constructor(@InjectModel(Blog.name) private blogModel: Model<BlogDocument>) {}
+  constructor(
+    @InjectModel(Blog.name) private blogModel: Model<BlogDocument>,
+    @InjectModel(Post.name) private postModel: Model<PostDocument>,
+  ) {}
 
   async findAllBlogs(
     queryParams: BlogsQueryParamsDto,
@@ -52,8 +58,8 @@ export class BlogsRepository {
 
       const blogsResponse: BlogsResponseDto = {
         pagesCount: totalPages,
-        page: pageNumber,
-        pageSize: pageSize,
+        page: +pageNumber,
+        pageSize: +pageSize,
         totalCount: totalCount,
         items: blogsViewModels,
       };
@@ -97,19 +103,25 @@ export class BlogsRepository {
     }
   }
 
-  async findOne(_id: string) {
-    const blog = await this.blogModel.findById(_id).exec();
-    if (!blog) {
-      throw new NotFoundException('Blog not found');
+  async findOne(id: string) {
+    try {
+      const blog = await this.blogModel.findById(id).exec();
+      if (!blog) {
+        return false;
+      }
+      return {
+        id: blog._id.toString(),
+        name: blog.name,
+        description: blog.description,
+        websiteUrl: blog.websiteUrl,
+        createdAt: blog.createdAt,
+        isMembership: blog.isMembership,
+      };
+    } catch (e) {
+      console.error('An error occurred while getting the blog:', e);
+
+      return false;
     }
-    return {
-      id: blog._id,
-      name: blog.name,
-      description: blog.description,
-      websiteUrl: blog.websiteUrl,
-      createdAt: blog.createdAt,
-      isMembership: blog.isMembership,
-    };
   }
 
   async updateOne(id: string, updateBlogDto: UpdateBlogDto) {
@@ -125,17 +137,13 @@ export class BlogsRepository {
         .exec();
 
       if (!updatedBlog) {
-        throw new NotFoundException('Blog not found');
+        return false;
       }
 
-      return;
+      return true;
     } catch (e) {
       console.error('An error occurred while updating the blog:', e);
-
-      return {
-        success: false,
-        message: 'An error occurred while updating the blog.',
-      };
+      return false;
     }
   }
 
@@ -151,6 +159,106 @@ export class BlogsRepository {
       if (e instanceof NotFoundException) {
         throw e;
       }
+    }
+  }
+
+  async createPostByBlogId(createPostDto, blogId, blogName) {
+    try {
+      const newPost = new this.postModel({
+        title: createPostDto.title,
+        shortDescription: createPostDto.shortDescription,
+        content: createPostDto.content,
+        blogId: blogId,
+        blogName: blogName,
+      });
+
+      const createdPost = await newPost.save();
+
+      return {
+        id: createdPost._id.toString(),
+        title: createdPost.title,
+        shortDescription: createdPost.shortDescription,
+        content: createdPost.content,
+        blogId: createdPost.blogId,
+        blogName: createdPost.blogName,
+        createdAt: createdPost.createdAt,
+        extendedLikesInfo: {
+          likesCount: createdPost.likesInfo.likesCount,
+          dislikesCount: createdPost.likesInfo.dislikesCount,
+          myStatus: 'None',
+          newestLikes: [
+            {
+              addedAt: '',
+              userId: '',
+              login: '',
+            },
+          ],
+        },
+      };
+    } catch (e) {
+      console.error('An error occurred while creating the blog:', e);
+      return true;
+    }
+  }
+
+  async findAllPosts(queryParams, blogId): Promise<PostsResponseDto | boolean> {
+    try {
+      const {
+        sortBy = 'createdAt',
+        sortDirection = 'desc',
+        pageNumber = 1,
+        pageSize = 10,
+      } = queryParams;
+
+      const skipCount = (pageNumber - 1) * pageSize;
+      const filter: any = {
+        blogId: blogId,
+      };
+
+      const totalCount = await this.postModel.countDocuments(filter).exec();
+      const totalPages = Math.ceil(totalCount / pageSize);
+
+      const posts = await this.postModel
+        .find(filter)
+        .sort({ [sortBy]: sortDirection === 'desc' ? -1 : 1 })
+        .skip(skipCount)
+        .limit(pageSize)
+        .exec();
+
+      const postsViewModels = posts.map((post) => ({
+        id: post._id.toString(),
+        title: post.title,
+        shortDescription: post.shortDescription,
+        content: post.content,
+        blogId: post.blogId,
+        blogName: post.blogName,
+        createdAt: post.createdAt.toISOString(),
+        extendedLikesInfo: {
+          likesCount: post.likesInfo.likesCount,
+          dislikesCount: post.likesInfo.dislikesCount,
+          myStatus: 'None',
+          newestLikes: [
+            {
+              addedAt: '',
+              userId: '',
+              login: '',
+            },
+          ],
+        },
+      }));
+
+      const postsResponse: PostsResponseDto = {
+        pagesCount: totalPages,
+        page: +pageNumber,
+        pageSize: +pageSize,
+        totalCount: totalCount,
+        items: postsViewModels,
+      };
+
+      return postsResponse;
+    } catch (e) {
+      console.error('An error occurred while getting all posts', e);
+      return false;
     }
   }
 }

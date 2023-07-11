@@ -41,11 +41,11 @@ export class PostsRepository {
         content: post.content,
         blogId: post.blogId,
         blogName: post.blogName,
-        createdAt: post.createdAt,
+        createdAt: post.createdAt.toISOString(),
         extendedLikesInfo: {
           likesCount: post.likesInfo.likesCount,
           dislikesCount: post.likesInfo.dislikesCount,
-          myStatus: '',
+          myStatus: 'None',
           newestLikes: [
             {
               addedAt: '',
@@ -58,8 +58,8 @@ export class PostsRepository {
 
       const postsResponse: PostsResponseDto = {
         pagesCount: totalPages,
-        page: pageNumber,
-        pageSize: pageSize,
+        page: +pageNumber,
+        pageSize: +pageSize,
         totalCount: totalCount,
         items: postsViewModels,
       };
@@ -98,7 +98,7 @@ export class PostsRepository {
         extendedLikesInfo: {
           likesCount: createdPost.likesInfo.likesCount,
           dislikesCount: createdPost.likesInfo.dislikesCount,
-          myStatus: '',
+          myStatus: 'None',
           newestLikes: [
             {
               addedAt: '',
@@ -122,7 +122,7 @@ export class PostsRepository {
     try {
       const post = await this.postModel.findById(id).exec();
       if (!post) {
-        throw new NotFoundException('Post not found');
+        return false;
       }
       return {
         id: post._id.toString(),
@@ -135,7 +135,7 @@ export class PostsRepository {
         extendedLikesInfo: {
           likesCount: post.likesInfo.likesCount,
           dislikesCount: post.likesInfo.dislikesCount,
-          myStatus: '',
+          myStatus: 'None',
           newestLikes: [
             {
               addedAt: '',
@@ -148,7 +148,7 @@ export class PostsRepository {
     } catch (e) {
       console.error('An error occurred while getting post ', e);
 
-      throw new NotFoundException();
+      return false;
     }
   }
 
@@ -172,10 +172,7 @@ export class PostsRepository {
     } catch (e) {
       console.error('An error occurred while updating the post:', e);
 
-      return {
-        success: false,
-        message: 'An error occurred while updating the post.',
-      };
+      throw new NotFoundException();
     }
   }
 
