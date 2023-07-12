@@ -14,7 +14,7 @@ import { TestingModule } from './testing/testing.module';
 @Module({
   imports: [
     DbModule,
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({ isGlobal: true }),
     UsersModule,
     BlogsModule,
     CommentsModule,
@@ -25,5 +25,6 @@ import { TestingModule } from './testing/testing.module';
   ],
   controllers: [AppController],
   providers: [AppService],
+  exports: [ConfigModule],
 })
 export class AppModule {}
