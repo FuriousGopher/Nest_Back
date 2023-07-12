@@ -15,7 +15,7 @@ export class User {
       login: { type: String },
       email: { type: String },
       passwordHash: { type: String },
-      createdAt: { type: String },
+      createdAt: { type: Date, default: new Date() },
       isMembership: { type: Boolean },
     }),
   )
@@ -23,7 +23,7 @@ export class User {
     login: string;
     email: string;
     passwordHash: string;
-    createdAt: string;
+    createdAt: Date;
     isMembership: boolean;
   };
   @Prop(
@@ -43,7 +43,7 @@ export class User {
 export const UserSchema = SchemaFactory.createForClass(User);
 
 UserSchema.pre<User>('save', function (next) {
-  this.accountData.createdAt = new Date().toISOString();
+  this.accountData.createdAt = new Date();
   this.accountData.isMembership = false;
   this.emailConfirmation.confirmationCode = v4();
   this.emailConfirmation.expirationDate = add(new Date(), {

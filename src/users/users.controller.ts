@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  NotFoundException,
   Param,
   Post,
   Query,
@@ -16,8 +17,15 @@ import { UserQueryParamsDto } from './dto/userQueryParams.dto';
 export class UsersController {
   constructor(protected userService: UsersService) {}
   @Get()
-  getUsers(@Query() queryParams: UserQueryParamsDto) {
-    return this.userService.getAllUsers(queryParams);
+  async getUsers(@Query() queryParams: UserQueryParamsDto) {
+    const result = await this.userService.getAllUsers(queryParams);
+    if (!result) {
+      return {
+        success: false,
+        message: 'An error occurred while getting users.',
+      };
+    }
+    return result;
   }
   @Post()
   createUser(@Body() inputModel: CreateUserDto) {
@@ -25,7 +33,10 @@ export class UsersController {
   }
   @HttpCode(204)
   @Delete(':id')
-  deleteUser(@Param('id') id: string) {
-    return this.userService.deleteUser(id);
+  async deleteUser(@Param('id') id: string) {
+    const deleted = await this.userService.deleteUser(id);
+    if (!deleted) {
+      throw new NotFoundException(`User with id ${id} not found`);
+    }
   }
 }

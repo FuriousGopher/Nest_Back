@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from '../db/schemas/users.schema';
 import { Model } from 'mongoose';
@@ -40,7 +40,7 @@ export class UsersRepository {
 
   async getAllUsers(
     queryParams: UserQueryParamsDto,
-  ): Promise<UsersResponseDto | { message: string } | { success: boolean }> {
+  ): Promise<UsersResponseDto | boolean> {
     try {
       const query = {
         pageSize: Number(queryParams.pageSize) || 10,
@@ -54,26 +54,38 @@ export class UsersRepository {
       const skipCount = (query.pageNumber - 1) * query.pageSize;
       const filter: any = {};
 
-      if (query.searchLoginTerm) {
-        filter['accountData.login'] = {
-          $regex: query.searchLoginTerm,
-          $options: 'i',
-        };
-      }
+      if (query.searchLoginTerm || query.searchEmailTerm) {
+        filter.$or = [];
 
-      if (query.searchEmailTerm) {
-        filter['accountData.email'] = {
-          $regex: query.searchEmailTerm,
-          $options: 'i',
-        };
+        if (query.searchLoginTerm) {
+          filter.$or.push({
+            'accountData.login': {
+              $regex: query.searchLoginTerm,
+              $options: 'i',
+            },
+          });
+        }
+
+        if (query.searchEmailTerm) {
+          filter.$or.push({
+            'accountData.email': {
+              $regex: query.searchEmailTerm,
+              $options: 'i',
+            },
+          });
+        }
       }
 
       const totalCount = await this.userModel.countDocuments(filter).exec();
       const totalPages = Math.ceil(totalCount / query.pageSize);
 
+      const sortKey = `accountData.${query.sortBy}`;
+
       const users = await this.userModel
         .find(filter)
-        .sort({ [query.sortBy]: query.sortDirection === 'desc' ? -1 : 1 })
+        .sort({
+          [sortKey]: query.sortDirection === 'desc' ? -1 : 1,
+        })
         .skip(skipCount)
         .limit(query.pageSize)
         .exec();
@@ -82,7 +94,7 @@ export class UsersRepository {
         id: user._id.toString(),
         login: user.accountData.login,
         email: user.accountData.email,
-        createdAt: user.accountData.createdAt,
+        createdAt: user.accountData.createdAt.toISOString(),
       }));
 
       return {
@@ -92,21 +104,17 @@ export class UsersRepository {
         totalCount: totalCount,
         items: userViewModels,
       };
-    } catch (e) {
-      console.error('An error occurred while getting all users', e);
-
-      return {
-        success: false,
-        message: 'An error occurred while getting all users.',
-      };
+    } catch (error) {
+      console.error('An error occurred while getting all users', error);
+      return false;
     }
   }
 
+  async findOne(id: string) {
+    return this.userModel.findById({ _id: id });
+  }
+
   async deleteUser(id: string) {
-    const userExists = await this.userModel.exists({ _id: id });
-    if (!userExists) {
-      throw new NotFoundException('User not found');
-    }
-    await this.userModel.findByIdAndDelete(id).exec();
+    return this.userModel.findByIdAndDelete({ _id: id });
   }
 }

@@ -1,20 +1,26 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
+import { useContainer } from 'class-validator';
+import cookieParser from 'cookie-parser';
+import { TrimPipe } from './pipes/trim.pipe';
+import { customExceptionFactory } from './exceptions/exception.factory';
+import { HttpExceptionFilter } from './exceptions/exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  useContainer(app.select(AppModule), { fallbackOnErrors: true });
   app.enableCors();
-
-  const config = new DocumentBuilder()
-    .setTitle('blogs example')
-    .setDescription('The cats API description')
-    .setVersion('1.0')
-    .addTag('blogs')
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
-
+  app.use(cookieParser());
+  app.useGlobalPipes(
+    new TrimPipe(),
+    new ValidationPipe({
+      transform: true,
+      stopAtFirstError: true,
+      exceptionFactory: customExceptionFactory,
+    }),
+  );
+  app.useGlobalFilters(new HttpExceptionFilter());
   await app.listen(3004);
 }
 bootstrap();

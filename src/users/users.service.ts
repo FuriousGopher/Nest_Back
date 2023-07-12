@@ -34,6 +34,10 @@ export class UsersService {
   }
 
   async deleteUser(id: string) {
-    return this.userRepository.deleteUser(id);
+    const user = await this.userRepository.findOne(id);
+    if (user) {
+      return await this.userRepository.deleteUser(id);
+    }
+    return false;
   }
 }
