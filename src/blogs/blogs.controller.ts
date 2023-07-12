@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
   Delete,
   Query,
@@ -15,7 +14,6 @@ import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { BlogsQueryParamsDto } from './dto/blogs-query-params.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
-import { CreatePostDto } from '../posts/dto/create-post.dto';
 import { PostsQueryParamsDto } from '../posts/dto/posts-query-params.dto';
 import { createPostByBlogIdDto } from './dto/create-post-byBlogId.dto';
 
