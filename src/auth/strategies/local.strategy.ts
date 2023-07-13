@@ -1,18 +1,17 @@
-/*
 import { Strategy } from 'passport-local';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { ValidateLoginAndPasswordCommand } from '../application/use-cases/validations/validate-login-pass.use-case';
-import { CommandBus } from '@nestjs/cqrs';
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
-  constructor() { }
+  constructor() {
+    super({
+      usernameField: 'loginOrEmail',
+    });
+  }
 
   async validate(loginOrEmail: string, password: string): Promise<any> {
-    const user = await
-
-    ;
+    const user = 1; /// write fun to check loginOrEmail and password
 
     if (!user) {
       throw new UnauthorizedException();
@@ -21,4 +20,3 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     return user;
   }
 }
-*/
