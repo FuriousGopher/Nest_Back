@@ -33,8 +33,15 @@ export class UsersController {
   }
 
   @Post()
-  createUser(@Body() inputModel: CreateUserDto) {
-    return this.userService.createUser(inputModel);
+  async createUser(@Body() inputModel: CreateUserDto) {
+    const createResult = await this.userService.createUser(inputModel);
+    if (!createResult) {
+      return {
+        success: false,
+        message: 'An error occurred while creating user.',
+      };
+    }
+    return createResult;
   }
 
   @HttpCode(204)

@@ -6,8 +6,20 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtBearerStrategy } from './strategies/jwt-bearer.strategy';
+import { JwtRefreshTokenStrategy } from './strategies/jwt-refresh.strategy';
+import { LocalStrategy } from './strategies/local.strategy';
+import { UsersModule } from '../users/users.module';
+import { MongooseModule } from '@nestjs/mongoose';
+import { User, UserSchema } from '../db/schemas/users.schema';
+import { MailAdapter } from '../utils/mailer/mail-adapter';
 
-const strategies = [BasicStrategy];
+const strategies = [
+  BasicStrategy,
+  JwtBearerStrategy,
+  LocalStrategy,
+  JwtRefreshTokenStrategy,
+];
 
 @Module({
   imports: [
@@ -28,6 +40,9 @@ const strategies = [BasicStrategy];
       },
     }),
     ConfigModule,
+    UsersModule,
+    MailAdapter,
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
   controllers: [AuthController],
   providers: [AuthService, ...strategies],

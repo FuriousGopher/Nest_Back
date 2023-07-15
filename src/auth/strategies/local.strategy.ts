@@ -11,12 +11,12 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(loginOrEmail: string, password: string): Promise<any> {
-    const user = 1; /// write fun to check loginOrEmail and password
+    const checkRefToken = 1; /// write fun to check loginOrEmail and password
 
-    if (!user) {
+    if (!checkRefToken) {
       throw new UnauthorizedException();
     }
 
-    return user;
+    return checkRefToken;
   }
 }

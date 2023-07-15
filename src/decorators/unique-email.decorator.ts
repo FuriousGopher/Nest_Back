@@ -1,4 +1,3 @@
-/*
 import {
   registerDecorator,
   ValidationOptions,
@@ -6,7 +5,7 @@ import {
   ValidatorConstraintInterface,
 } from 'class-validator';
 import { Injectable } from '@nestjs/common';
-import { UsersRepository } from '../../api/infrastructure/repositories/users/users.repository';
+import { UsersRepository } from '../users/users.repository';
 
 @ValidatorConstraint({ name: 'IsEmailExist', async: true })
 @Injectable()
@@ -29,4 +28,3 @@ export const IsEmailExist =
       validator: IsEmailExistConstraint,
     });
   };
-*/

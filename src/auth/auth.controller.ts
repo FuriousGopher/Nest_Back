@@ -13,6 +13,8 @@ import { NewPasswordDto } from './dto/new-password.dto';
 import { InputForLoginDto } from './dto/Input-for-login.dto';
 import { RefreshTokenDto } from './dto/refreshToken.dto';
 import { ConfirmationCodeDto } from './dto/confirmation-code.dto';
+import { RegistrationDto } from './dto/registration.dto';
+import { EmailResendingDto } from './dto/recoveryEmailResending.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -47,7 +49,12 @@ export class AuthController {
   @UseGuards(ThrottlerGuard)
   @Post('registration-confirmation')
   async confirmationOfEmail(@Body() confirmationCode: ConfirmationCodeDto) {
-    return await this.authService.confirmationOfEnail(confirmationCode);
+    return await this.authService.confirmationOfEmail(confirmationCode);
+  }
+
+  @Post('registration-email-resending')
+  async emailResending(emailResendingDto: EmailResendingDto) {
+    return await this.authService.logout(emailResendingDto);
   }
 
   @HttpCode(204)
@@ -55,6 +62,11 @@ export class AuthController {
   @Post('registration')
   async registration(@Body() registrationDto: RegistrationDto) {
     return await this.authService.registration(registrationDto);
+  }
+
+  @Post('logout')
+  async logout() {
+    return await this.authService.logout();
   }
 
   @Get('me')

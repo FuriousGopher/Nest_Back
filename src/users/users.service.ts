@@ -18,7 +18,7 @@ export class UsersService {
     try {
       const passwordSalt = await genSalt(10);
       const passwordHash = await hash(createUserDto.password, passwordSalt);
-      const newUser = await this.userRepository.createUser(
+      const newUser = await this.userRepository.createUserBySA(
         createUserDto,
         passwordHash,
       );

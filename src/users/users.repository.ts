@@ -5,12 +5,13 @@ import { Model } from 'mongoose';
 import { UserQueryParamsDto } from './dto/userQueryParams.dto';
 import { UsersResponseDto } from './dto/usersResponse.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { tr } from 'date-fns/locale';
 
 @Injectable()
 export class UsersRepository {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
-  async createUser(createUserDto: CreateUserDto, passwordHash) {
+  async createUserBySA(createUserDto: CreateUserDto, passwordHash) {
     try {
       const newUser = new this.userModel({
         accountData: {
@@ -18,16 +19,12 @@ export class UsersRepository {
           email: createUserDto.email,
           passwordHash: passwordHash,
         },
+        emailConfirmation: {
+          isConfirmed: true /*TODO test this line*/,
+        },
       });
 
       const createdUser = await newUser.save();
-
-      return {
-        id: createdUser._id,
-        login: createdUser.accountData.login,
-        email: createdUser.accountData.email,
-        createdAt: createdUser.accountData.createdAt,
-      };
     } catch (e) {
       console.error('An error occurred while creating a user:', e);
 
@@ -114,7 +111,37 @@ export class UsersRepository {
     return this.userModel.findById({ _id: id });
   }
 
+  async saveNewUser(newUser: UserDocument) {
+    return await newUser.save();
+  }
+
+  async checkLogin(login: string) {
+    return this.userModel.findOne({ 'accountData.login': login });
+  }
+
   async deleteUser(id: string) {
     return this.userModel.findByIdAndDelete({ _id: id });
+  }
+
+  async checkEmail(email: string) {
+    return this.userModel.findOne({ 'accountData.email': email });
+  }
+
+  async findByConfirmationCode(confirmationCode: string) {
+    return this.userModel.findOne({
+      'emailConfirmation.confirmationCode': confirmationCode,
+    });
+  }
+
+  async confirmationOfEmail(confirmationCode: string) {
+    try {
+      const user = await this.findByConfirmationCode(confirmationCode);
+      user!.emailConfirmation.isConfirmed = true;
+      await user?.save();
+      return true;
+    } catch (e) {
+      console.error('An error occurred while confirming email:', e);
+      return false;
+    }
   }
 }

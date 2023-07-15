@@ -47,5 +47,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
   ],
   providers: [MailAdapter],
+  exports: [MailAdapter],
 })
 export class MailModule {}

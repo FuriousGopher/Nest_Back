@@ -43,9 +43,8 @@ export class MailAdapter {
     await this.mailerService.sendMail({
       to: email,
       subject: 'Password recovery',
-      template: './password-recovery', // `.hbs` extension is appended automatically
+      template: './password-recovery',
       context: {
-        // ✏️ filling curly brackets with content
         login: login,
         url,
       },

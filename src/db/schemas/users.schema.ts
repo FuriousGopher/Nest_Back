@@ -45,11 +45,5 @@ export const UserSchema = SchemaFactory.createForClass(User);
 UserSchema.pre<User>('save', function (next) {
   this.accountData.createdAt = new Date();
   this.accountData.isMembership = false;
-  this.emailConfirmation.confirmationCode = v4();
-  this.emailConfirmation.expirationDate = add(new Date(), {
-    hours: 1,
-    minutes: 3,
-  });
-  this.emailConfirmation.isConfirmed = true;
   next();
 });

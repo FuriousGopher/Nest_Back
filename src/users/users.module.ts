@@ -14,5 +14,6 @@ const strategies = [BasicStrategy];
   ],
   controllers: [UsersController],
   providers: [UsersService, UsersRepository, ...strategies],
+  exports: [UsersRepository],
 })
 export class UsersModule {}
