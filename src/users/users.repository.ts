@@ -5,7 +5,7 @@ import { Model } from 'mongoose';
 import { UserQueryParamsDto } from './dto/userQueryParams.dto';
 import { UsersResponseDto } from './dto/usersResponse.dto';
 import { CreateUserDto } from './dto/create-user.dto';
-import { tr } from 'date-fns/locale';
+import { ConfirmationCodeDto } from '../auth/dto/confirmation-code.dto';
 
 @Injectable()
 export class UsersRepository {
@@ -143,5 +143,46 @@ export class UsersRepository {
       console.error('An error occurred while confirming email:', e);
       return false;
     }
+  }
+
+  async updateEmailConfirmationData(
+    id: string,
+    newConfirmationCode: string,
+    newExpirationDate: Date,
+  ) {
+    try {
+      const user = await this.userModel.findById({ _id: id });
+      user!.emailConfirmation.confirmationCode = newConfirmationCode;
+      user!.emailConfirmation.expirationDate = newExpirationDate;
+      await user?.save();
+      return true;
+    } catch (e) {
+      console.error(
+        'An error occurred while updating email confirmation data:',
+        e,
+      );
+      return false;
+    }
+  }
+
+  async updatePassword(id: string, passwordHash: string) {
+    try {
+      const user = await this.userModel.findById({ _id: id });
+      user!.accountData.passwordHash = passwordHash;
+      await user?.save();
+      return true;
+    } catch (e) {
+      console.error('An error occurred while updating password:', e);
+      return false;
+    }
+  }
+
+  async findByLoginOrEmail(loginOrEmail: string) {
+    return this.userModel.findOne({
+      $or: [
+        { 'accountData.login': loginOrEmail },
+        { 'accountData.email': loginOrEmail },
+      ],
+    });
   }
 }

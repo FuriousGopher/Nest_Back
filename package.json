@@ -2,7 +2,7 @@
   "name": "nest_new",
   "version": "0.0.1",
   "description": "",
-  "author": "",
+  "author": "ivan_kabar",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -26,6 +26,7 @@
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.0.0",
     "@nestjs/core": "^10.0.0",
+    "@nestjs/cqrs": "^10.0.1",
     "@nestjs/jwt": "^10.1.0",
     "@nestjs/mapped-types": "*",
     "@nestjs/mongoose": "^10.0.0",

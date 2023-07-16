@@ -3,13 +3,18 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { refTokFromCookieExtractor } from '../../utils/refTokFromCookie.extractor';
+import { ValidateRefreshTokenCommand } from '../validators/validate-refresh-token';
+import { CommandBus } from '@nestjs/cqrs';
 
 @Injectable()
 export class JwtRefreshTokenStrategy extends PassportStrategy(
   Strategy,
   'refresh',
 ) {
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private commandBus: CommandBus,
+  ) {
     super({
       jwtFromRequest: refTokFromCookieExtractor,
       ignoreExpiration: false,
@@ -18,7 +23,9 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
   }
 
   async validate(payload: any) {
-    const result = 1; //write fun to check ref token
+    const result = await this.commandBus.execute(
+      new ValidateRefreshTokenCommand(payload),
+    );
 
     if (!result) {
       throw new UnauthorizedException();
