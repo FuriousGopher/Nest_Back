@@ -15,6 +15,7 @@ import { User, UserSchema } from '../db/schemas/users.schema';
 import { CommandBus } from '@nestjs/cqrs';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { MailAdapter } from '../utils/mailer/mail-adapter';
+import { MailModule } from '../utils/mailer/mail.module';
 
 const strategies = [
   BasicStrategy,
@@ -44,15 +45,9 @@ const strategies = [
     ConfigModule,
     UsersModule,
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
-    MailerModule,
+    MailModule,
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    ...strategies,
-    CommandBus,
-    MailAdapter,
-    ConfigService,
-  ],
+  providers: [AuthService, ...strategies, CommandBus, ConfigService],
 })
 export class AuthModule {}
