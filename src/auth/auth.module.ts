@@ -12,10 +12,13 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { UsersModule } from '../users/users.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from '../db/schemas/users.schema';
-import { CommandBus } from '@nestjs/cqrs';
-import { MailerModule } from '@nestjs-modules/mailer';
-import { MailAdapter } from '../utils/mailer/mail-adapter';
+import { CqrsModule } from '@nestjs/cqrs';
 import { MailModule } from '../utils/mailer/mail.module';
+import { TokensCreate } from './tokens/tokens-create';
+import { ValidateRefreshToken } from './validators/validate-refresh-token';
+import { UsersRepository } from '../users/users.repository';
+import { IsLoginExistConstraint } from '../decorators/unique-login.decorator';
+import { IsEmailExistConstraint } from '../decorators/unique-email.decorator';
 
 const strategies = [
   BasicStrategy,
@@ -31,23 +34,23 @@ const strategies = [
       limit: 5,
     }),
     PassportModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const secretKey = configService.get<string>('SECRET_KEY');
-        return {
-          secret: secretKey,
-          signOptions: { expiresIn: '3m' },
-        };
-      },
-    }),
+    JwtModule,
     ConfigModule,
     UsersModule,
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     MailModule,
+    CqrsModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, ...strategies, CommandBus, ConfigService],
+  providers: [
+    AuthService,
+    ...strategies,
+    TokensCreate,
+    ConfigService,
+    UsersRepository,
+    IsLoginExistConstraint,
+    IsEmailExistConstraint,
+    ValidateRefreshToken,
+  ],
 })
 export class AuthModule {}

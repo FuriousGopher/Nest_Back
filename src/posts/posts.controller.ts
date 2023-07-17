@@ -3,18 +3,25 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
   Delete,
   Query,
   HttpCode,
   Put,
   NotFoundException,
+  UseGuards,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PostsQueryParamsDto } from './dto/posts-query-params.dto';
+import { CreateCommentDto } from '../comments/dto/create-comment.dto';
+import { exceptionHandler } from '../exceptions/exception.handler';
+import { ResultCode } from '../enums/result-code.enum';
+import { LikeStatus } from '../enums/like-status.enum';
+import { LikesDto } from './dto/like-status.dto';
+import { JwtBearerGuard } from '../auth/guards/jwt-bearer.guard';
+import { UserIdFromGuard } from '../decorators/user-id-from-guard.decorator';
 
 @Controller('posts')
 export class PostsController {
@@ -57,4 +64,57 @@ export class PostsController {
   remove(@Param('id') id: string) {
     return this.postsService.remove(id);
   }
+
+  ////Comments
+
+  @UseGuards(JwtBearerGuard)
+  @Post(':id/comments')
+  async createComment(
+    @Param('id') id: string,
+    @Body() createCommentDto: CreateCommentDto,
+    @UserIdFromGuard() userId,
+  ) {
+    const resultCreated = await this.postsService.createComment(
+      id,
+      createCommentDto,
+      userId,
+    );
+    if (!resultCreated) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Post with this id not found',
+        'id',
+      );
+    }
+    return resultCreated;
+  }
+  /*
+  @Get(':id/comments')
+  async findAllComments(@Param('id') id: string) {
+    const result = await this.postsService.findAllComments(id);
+    if (!result) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Post with this id not found',
+        'id',
+      );
+    }
+    return result;
+  }
+
+  @Put(':id/comments/like-status')
+  async changeLikeStatus(
+    @Param('id') id: string,
+    @Body() likeStatusDto: LikesDto,
+  ) {
+    const result = await this.postsService.changeLikeStatus(id, likeStatusDto);
+    if (!result) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Post with this id not found',
+        'id',
+      );
+    }
+    return result;
+  }*/
 }

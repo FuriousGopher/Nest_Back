@@ -6,11 +6,10 @@ import { User, UserDocument } from '../db/schemas/users.schema';
 import { Model } from 'mongoose';
 import { v4 } from 'uuid';
 import { add } from 'date-fns';
-import { MailAdapter } from '../utils/mailer/mail-adapter';
 import { ConfirmationCodeDto } from './dto/confirmation-code.dto';
 import { RecoveryEmailDto } from './dto/recoveryEmail.dto';
-import { EmailResendingDto } from './dto/recoveryEmailResending.dto';
 import * as bcrypt from 'bcryptjs';
+import { MailAdapter } from '../utils/mailer/mail-adapter';
 
 @Injectable()
 export class AuthService {
@@ -41,6 +40,7 @@ export class AuthService {
             hours: 5,
             minutes: 3,
           }),
+          isConfirmed: false,
         },
       });
 
@@ -49,7 +49,6 @@ export class AuthService {
         newUser.accountData.email,
         newUser.emailConfirmation.confirmationCode!,
       );
-
       const savedUser = await this.userRepository.saveNewUser(newUser);
       return {
         id: savedUser._id,
@@ -68,15 +67,25 @@ export class AuthService {
   }
 
   async confirmationOfEmail(confirmationCode: ConfirmationCodeDto) {
-    return await this.userRepository.confirmationOfEmail(
-      confirmationCode.toString(),
+    const user = await this.userRepository.findByConfirmationCode(
+      confirmationCode.code,
     );
+    if (!user) return false;
+
+    const currentDateTime = new Date();
+    const expirationDate = user.emailConfirmation.expirationDate;
+    const isConfirmed = user.emailConfirmation.isConfirmed;
+    if (expirationDate! > currentDateTime && isConfirmed) {
+      return false;
+    }
+    return await this.userRepository.confirmationOfEmail(confirmationCode.code);
   }
 
   async recoveryPass(recoveryDto: RecoveryEmailDto) {
     const findUserByEmail = await this.userRepository.checkEmail(
       recoveryDto.email,
     );
+    if (!findUserByEmail) return true;
     if (findUserByEmail) {
       const newConfirmationCode = v4();
       const newExpirationDate = add(new Date(), {
@@ -89,7 +98,7 @@ export class AuthService {
         newConfirmationCode,
       );
       return await this.userRepository.updateEmailConfirmationData(
-        findUserByEmail.id,
+        findUserByEmail._id.toString(),
         newConfirmationCode,
         newExpirationDate,
       );
@@ -97,10 +106,12 @@ export class AuthService {
     return true;
   }
 
-  async emailResending(emailForResending: EmailResendingDto) {
+  async emailResending(emailForResending: RecoveryEmailDto) {
     const checkEmail = await this.userRepository.checkEmail(
       emailForResending.email,
     );
+    if (!checkEmail) return;
+    if (checkEmail.emailConfirmation.isConfirmed) return false;
     if (checkEmail) {
       const newConfirmationCode = v4();
       const newExpirationDate = add(new Date(), {
@@ -113,12 +124,11 @@ export class AuthService {
         newConfirmationCode,
       );
       return await this.userRepository.updateEmailConfirmationData(
-        checkEmail.id,
+        checkEmail._id.toString(),
         newConfirmationCode,
         newExpirationDate,
       );
     }
-    return true;
   }
 
   async newPas(newPassword: string, recoveryCode: string) {
@@ -132,7 +142,7 @@ export class AuthService {
         const passwordSalt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(newPassword, passwordSalt);
         return await this.userRepository.updatePassword(
-          findUserByRecoveryCode.id,
+          findUserByRecoveryCode._id.toString(),
           passwordHash,
         );
       }
@@ -157,7 +167,7 @@ export class AuthService {
       passwordHash === findUserByLoginOrEmail.accountData.passwordHash;
     if (checkPassword) {
       return {
-        id: findUserByLoginOrEmail.id,
+        id: findUserByLoginOrEmail._id.toString(),
         login: findUserByLoginOrEmail.accountData.login,
         email: findUserByLoginOrEmail.accountData.email,
         createdAt: findUserByLoginOrEmail.accountData.createdAt,

@@ -10,15 +10,10 @@ export class ValidateRefreshTokenCommand {
 export class ValidateRefreshToken
   implements ICommandHandler<ValidateRefreshTokenCommand>
 {
-  constructor(
-    private readonly usersRepository: UsersRepository,
-    private readonly jwtService: JwtService,
-  ) {}
+  constructor(private readonly usersRepository: UsersRepository) {}
 
   async execute(command: ValidateRefreshTokenCommand) {
-    const decoded = this.jwtService.verify(command.payload.refreshToken);
-    if (!decoded) return false;
-    const userId = decoded.sub;
+    const userId = command.payload.sub;
 
     const user = this.usersRepository.findOne(userId);
 

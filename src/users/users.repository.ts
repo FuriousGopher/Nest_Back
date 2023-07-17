@@ -5,7 +5,6 @@ import { Model } from 'mongoose';
 import { UserQueryParamsDto } from './dto/userQueryParams.dto';
 import { UsersResponseDto } from './dto/usersResponse.dto';
 import { CreateUserDto } from './dto/create-user.dto';
-import { ConfirmationCodeDto } from '../auth/dto/confirmation-code.dto';
 
 @Injectable()
 export class UsersRepository {
@@ -20,18 +19,24 @@ export class UsersRepository {
           passwordHash: passwordHash,
         },
         emailConfirmation: {
-          isConfirmed: true /*TODO test this line*/,
+          isConfirmed: true,
         },
       });
 
-      const createdUser = await newUser.save();
-    } catch (e) {
-      console.error('An error occurred while creating a user:', e);
+      await newUser.save();
 
       return {
-        success: false,
-        message: 'An error occurred while creating a user.',
+        id: newUser._id.toString(),
+        login: newUser.accountData.login,
+        email: newUser.accountData.email,
+        createdAt: newUser.accountData.createdAt.toISOString(),
       };
+    } catch (e) {
+      console.error(
+        `An error occurred while creating a user ${createUserDto.login} in repo`,
+        e,
+      );
+      return false;
     }
   }
 
@@ -116,7 +121,13 @@ export class UsersRepository {
   }
 
   async checkLogin(login: string) {
-    return this.userModel.findOne({ 'accountData.login': login });
+    const foundLogin = await this.userModel.findOne({
+      'accountData.login': login,
+    });
+    if (foundLogin) {
+      return true;
+    }
+    return false;
   }
 
   async deleteUser(id: string) {
@@ -151,9 +162,10 @@ export class UsersRepository {
     newExpirationDate: Date,
   ) {
     try {
-      const user = await this.userModel.findById({ _id: id });
+      const user = await this.findOne(id);
       user!.emailConfirmation.confirmationCode = newConfirmationCode;
       user!.emailConfirmation.expirationDate = newExpirationDate;
+      user!.emailConfirmation.isConfirmed = false;
       await user?.save();
       return true;
     } catch (e) {
@@ -169,6 +181,7 @@ export class UsersRepository {
     try {
       const user = await this.userModel.findById({ _id: id });
       user!.accountData.passwordHash = passwordHash;
+      user!.emailConfirmation.isConfirmed = true;
       await user?.save();
       return true;
     } catch (e) {

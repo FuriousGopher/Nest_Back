@@ -1,19 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
-import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MailAdapter {
-  constructor(
-    private mailerService: MailerService,
-    private configService: ConfigService,
-  ) {}
-
-  getMailAuth(): { pass: string | undefined; user: string | undefined } {
-    const user = this.configService.get<string>('MY_EMAIL');
-    const password = this.configService.get<string>('PASSWORD');
-    return { user, pass: password };
-  }
+  constructor(private mailerService: MailerService) {}
 
   async sendRegistrationMail(
     login: string,
@@ -22,14 +12,12 @@ export class MailAdapter {
   ) {
     const url = `https://somesite.com/confirm-email?code=${confirmationCode}`;
 
+    const text = `Dear ${login},\n\nPlease click on the following link to confirm your email:\n${url}`;
+
     await this.mailerService.sendMail({
       to: email,
       subject: 'Registration confirmation',
-      template: './confirmation',
-      context: {
-        login: login,
-        url,
-      },
+      text: text,
     });
   }
 
@@ -40,14 +28,12 @@ export class MailAdapter {
   ) {
     const url = `https://somesite.com/password-recovery?recoveryCode=${recoveryCode}`;
 
+    const text = `Dear ${login},\n\nPlease click on the following link to recover your password:\n${url}`;
+
     await this.mailerService.sendMail({
       to: email,
       subject: 'Password recovery',
-      template: './password-recovery',
-      context: {
-        login: login,
-        url,
-      },
+      text: text,
     });
   }
 }

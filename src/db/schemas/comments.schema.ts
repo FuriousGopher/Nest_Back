@@ -25,19 +25,22 @@ export class Comment {
   @Prop()
   postId: string;
 
+  @Prop()
+  createdAt: Date;
+
   @Prop(
     raw({
       likesCount: { type: Number },
       dislikesCount: { type: Number },
-      users: { type: Array },
       myStatus: { type: String },
+      users: { type: Array },
     }),
   )
   likesInfo: {
     likesCount: number;
     dislikesCount: number;
+    myStatus: string;
     users: UserLikes[];
-    myStatus?: string;
   };
 }
 
@@ -47,3 +50,8 @@ type UserLikes = {
 };
 
 export const CommentSchema = SchemaFactory.createForClass(Comment);
+
+CommentSchema.pre<Comment>('save', function (next) {
+  this.createdAt = new Date();
+  next();
+});

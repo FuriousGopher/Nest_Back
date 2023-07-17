@@ -38,7 +38,7 @@ export class UsersController {
     if (!createResult) {
       return {
         success: false,
-        message: 'An error occurred while creating user.',
+        message: `An error occurred while creating user ${inputModel.login}.`,
       };
     }
     return createResult;

@@ -1,46 +1,27 @@
-import {
-  MailerModule,
-  MailerOptions,
-  MailerService,
-} from '@nestjs-modules/mailer';
-import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { MailerModule, MailerOptions } from '@nestjs-modules/mailer';
 import { Module } from '@nestjs/common';
-import { join } from 'path';
-import { MailAdapter } from './mail-adapter';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MailAdapter } from './mail-adapter';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
     MailerModule.forRootAsync({
       imports: [ConfigModule],
-      inject: [ConfigService, MailerService],
-      useFactory: async (
-        configService: ConfigService,
-        mailerService: MailerService,
-      ) => {
-        const mailAdapter = new MailAdapter(mailerService, configService);
-        const mailAuth = mailAdapter.getMailAuth();
-
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => {
         return {
           transport: {
             port: 465,
             host: 'smtp.gmail.com',
             auth: {
-              user: mailAuth.user,
-              pass: mailAuth.pass,
+              user: configService.get<string>('MY_EMAIL'),
+              pass: configService.get<string>('PASSWORD'),
             },
             secure: true,
           },
           defaults: {
-            from: `"Admin" <${mailAuth.user}>`,
-          },
-          template: {
-            dir: join(__dirname, 'templates'),
-            adapter: new HandlebarsAdapter(),
-            options: {
-              strict: true,
-            },
+            from: `"Admin" <${configService.get<string>('MY_EMAIL')}>`,
           },
         } as MailerOptions;
       },

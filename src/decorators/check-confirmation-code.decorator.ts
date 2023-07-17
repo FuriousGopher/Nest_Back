@@ -1,32 +1,53 @@
+/*
+`/!*
 import {
   registerDecorator,
   ValidationOptions,
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
-import { Injectable } from '@nestjs/common';
 import { UsersRepository } from '../users/users.repository';
+import { BadRequestException } from '@nestjs/common';
+import {
+  confirmCodeField,
+  confirmCodeIsIncorrect,
+} from '../exceptions/exception.constants';
+import { ResultCode } from '../enums/result-code.enum';
+import { exceptionHandler } from '../exceptions/exception.handler';
 
 @ValidatorConstraint({ name: 'IsConfirmationCodeValid', async: true })
-@Injectable()
 export class IsConfirmationCodeValidConstraint
   implements ValidatorConstraintInterface
 {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  constructor(private usersRepository: UsersRepository) {
+    console.log(this.usersRepository);
+  }
 
-  async validate(code: string) {
+  async validate(code: string): Promise<boolean> {
     const user = await this.usersRepository.findByConfirmationCode(code);
 
     if (!user) {
-      return false;
+      throw new BadRequestException('Invalid confirmation code.');
     }
 
-    const currentDateTime = new Date();
+    const currentDateTime = new Date(); /!**!/
     const expirationDate = user.emailConfirmation.expirationDate;
 
     const isConfirmed = user.emailConfirmation.isConfirmed;
 
-    return expirationDate! > currentDateTime && !isConfirmed;
+    if (expirationDate! > currentDateTime && !isConfirmed) {
+      return exceptionHandler(
+        ResultCode.BadRequest /!**!/,
+        confirmCodeIsIncorrect,
+        confirmCodeField,
+      );
+    }
+
+    return exceptionHandler(
+      ResultCode.BadRequest,
+      confirmCodeIsIncorrect,/!**!/
+      confirmCodeField,
+    );
   }
 }
 
@@ -42,3 +63,5 @@ export function IsConfirmationCodeValid(validationOptions?: ValidationOptions) {
     });
   };
 }
+*!/
+`*/

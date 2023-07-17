@@ -1,7 +1,5 @@
 import { Prop, Schema, SchemaFactory, raw } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { add } from 'date-fns';
-import { v4 } from 'uuid';
 
 export type UserDocument = HydratedDocument<User>;
 

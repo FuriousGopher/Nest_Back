@@ -4,7 +4,7 @@ import { v4 } from 'uuid';
 import { ConfigService } from '@nestjs/config';
 
 export class TokensCreateCommand {
-  constructor(public userId: string, public deviceId = v4()) {}
+  constructor(public userId: string) {}
 }
 
 @CommandHandler(TokensCreateCommand)
@@ -16,9 +16,10 @@ export class TokensCreate implements ICommandHandler<TokensCreateCommand> {
 
   async execute(command: TokensCreateCommand) {
     const accessTokenPayload = { sub: command.userId };
+    const deviceId = v4();
     const refreshTokenPayload = {
       sub: command.userId,
-      deviceId: command.deviceId,
+      deviceId,
     };
 
     const accessToken = this.jwtService.sign(accessTokenPayload, {

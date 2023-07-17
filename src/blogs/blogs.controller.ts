@@ -8,7 +8,6 @@ import {
   Query,
   HttpCode,
   Put,
-  NotFoundException,
 } from '@nestjs/common';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
@@ -16,7 +15,8 @@ import { BlogsQueryParamsDto } from './dto/blogs-query-params.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { PostsQueryParamsDto } from '../posts/dto/posts-query-params.dto';
 import { createPostByBlogIdDto } from './dto/create-post-byBlogId.dto';
-
+import { exceptionHandler } from '../exceptions/exception.handler';
+import { ResultCode } from '../enums/result-code.enum';
 @Controller('blogs')
 export class BlogsController {
   constructor(private readonly blogsService: BlogsService) {}
@@ -36,7 +36,11 @@ export class BlogsController {
       id,
     );
     if (!createResult) {
-      throw new NotFoundException(`Blog with id ${id} not found`);
+      return exceptionHandler(
+        ResultCode.BadRequest,
+        'Blog with this id not found',
+        'id',
+      );
     }
     return createResult;
   }
@@ -56,7 +60,11 @@ export class BlogsController {
       id,
     );
     if (!getResultAllPosts) {
-      throw new NotFoundException(`Blog with id ${id} not found`);
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Blog with this id not found',
+        'id',
+      );
     }
     return getResultAllPosts;
   }
@@ -65,7 +73,11 @@ export class BlogsController {
   async findOne(@Param('id') id: string) {
     const resultFindOne = await this.blogsService.findOne(id);
     if (!resultFindOne) {
-      throw new NotFoundException(`Blog with id ${id} not found`);
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Blog with this id not found',
+        'id',
+      );
     }
     return resultFindOne;
   }
@@ -78,7 +90,11 @@ export class BlogsController {
   ) {
     const updatedResult = await this.blogsService.updateOne(id, updateBlogDto);
     if (!updatedResult) {
-      throw new NotFoundException(`Blog with id ${id} not found`);
+      return exceptionHandler(
+        ResultCode.BadRequest,
+        'Blog with this id not found',
+        'id',
+      );
     }
     return updatedResult;
   }

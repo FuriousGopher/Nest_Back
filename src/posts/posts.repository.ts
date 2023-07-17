@@ -120,7 +120,7 @@ export class PostsRepository {
 
   async findOne(id: string) {
     try {
-      const post = await this.postModel.findById(id).exec();
+      const post = await this.postModel.findById({ _id: id });
       if (!post) {
         return false;
       }
@@ -185,6 +185,23 @@ export class PostsRepository {
       return;
     } catch (e) {
       console.error('An error occurred while deleting the post:', e);
+      if (e instanceof NotFoundException) {
+        throw e;
+      }
+    }
+  }
+
+  async createComment(id: string, content: string, userId: string) {
+    try {
+      const post = await this.postModel.findById({ _id: id });
+      if (!post) {
+        return false;
+      }
+
+      await post.save();
+      return;
+    } catch (e) {
+      console.error('An error occurred while creating a comment:', e);
       if (e instanceof NotFoundException) {
         throw e;
       }

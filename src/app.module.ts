@@ -10,7 +10,6 @@ import { PostsModule } from './posts/posts.module';
 import { AuthModule } from './auth/auth.module';
 import { SecurityModule } from './security/security.module';
 import { TestingModule } from './testing/testing.module';
-import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
   imports: [
@@ -23,7 +22,6 @@ import { MailerModule } from '@nestjs-modules/mailer';
     AuthModule,
     SecurityModule,
     TestingModule,
-    MailerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
