@@ -101,7 +101,7 @@ export class PostsController {
     }
     return result;
   }
-
+  @UseGuards(JwtRefreshGuard)
   @Put(':id/comments/like-status')
   async changeLikeStatus(
     @Param('id') id: string,
