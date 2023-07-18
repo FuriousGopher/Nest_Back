@@ -23,7 +23,6 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
   }
 
   async validate(payload: any) {
-    console.log('payload', payload);
     const result = await this.commandBus.execute(
       new ValidateRefreshTokenCommand(payload),
     );

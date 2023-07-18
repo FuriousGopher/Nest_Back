@@ -13,6 +13,7 @@ import { UsersModule } from '../users/users.module';
 import { CqrsModule } from '@nestjs/cqrs';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Comment, CommentSchema } from '../db/schemas/comments.schema';
+import { AuthModule } from '../auth/auth.module';
 
 const strategies = [
   BasicStrategy,
@@ -28,6 +29,7 @@ const strategies = [
     UsersModule,
     CqrsModule,
     MongooseModule.forFeature([{ name: Comment.name, schema: CommentSchema }]),
+    AuthModule,
   ],
   controllers: [CommentsController],
   providers: [CommentsService, ...strategies, CommentRepository, ConfigService],

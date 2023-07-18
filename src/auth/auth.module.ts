@@ -52,5 +52,6 @@ const strategies = [
     IsEmailExistConstraint,
     ValidateRefreshToken,
   ],
+  exports: [AuthService, TokensCreate, ValidateRefreshToken],
 })
 export class AuthModule {}

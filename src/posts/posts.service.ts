@@ -9,17 +9,14 @@ import { Comment } from '../db/schemas/comments.schema';
 import { Model } from 'mongoose';
 import { UsersRepository } from '../users/users.repository';
 import { CommentRepository } from '../comments/comment.repository';
+import { CommentsQueryParamsDto } from './dto/comments-query-params.dto';
 
 @Injectable()
 export class PostsService {
   constructor(
-    @Inject(PostsRepository)
     protected postsRepository: PostsRepository,
-    @Inject(UsersRepository)
     protected usersRepository: UsersRepository,
-    @Inject(CommentRepository)
     protected commentRepository: CommentRepository,
-    @Inject(BlogsRepository)
     protected blogsRepository: BlogsRepository,
     @InjectModel(Comment.name) private commentModel: Model<Comment>,
   ) {}
@@ -94,5 +91,17 @@ export class PostsService {
         myStatus: newComment.likesInfo.myStatus,
       },
     };
+  }
+
+  async findAllComments(
+    id: string,
+    queryParams: CommentsQueryParamsDto,
+    userId: string,
+  ) {
+    const findPost = await this.postsRepository.findOne(id);
+
+    if (!findPost) return false;
+
+    return await this.commentRepository.findAllComments(id, queryParams);
   }
 }
