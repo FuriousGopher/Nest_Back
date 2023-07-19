@@ -17,6 +17,7 @@ import { JwtRefreshTokenStrategy } from '../auth/strategies/jwt-refresh.strategy
 import { AuthModule } from '../auth/auth.module';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TokenParserMiddleware } from '../middlewares/token-parser.middleware';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 
 const strategies = [
   BasicStrategy,
@@ -35,6 +36,7 @@ const strategies = [
     ]),
     AuthModule,
     CqrsModule,
+    JwtModule,
   ],
   controllers: [PostsController],
   providers: [
@@ -49,6 +51,5 @@ const strategies = [
 export class PostsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(TokenParserMiddleware).forRoutes('*');
-    // Apply the TokenParserMiddleware to all routes in the module
   }
 }

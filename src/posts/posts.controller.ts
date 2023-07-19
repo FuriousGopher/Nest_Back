@@ -107,7 +107,6 @@ export class PostsController {
       queryParams,
       userId,
     );
-    console.log(userId);
     if (!result) {
       return exceptionHandler(
         ResultCode.NotFound,

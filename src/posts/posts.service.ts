@@ -102,6 +102,10 @@ export class PostsService {
 
     if (!findPost) return false;
 
-    return await this.commentRepository.findAllComments(id, queryParams);
+    return await this.commentRepository.findAllComments(
+      id,
+      queryParams,
+      userId,
+    );
   }
 }

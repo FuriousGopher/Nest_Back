@@ -14,7 +14,11 @@ export class CommentRepository {
     return newComment.save();
   }
 
-  async findAllComments(id: string, queryParams: CommentsQueryParamsDto) {
+  async findAllComments(
+    id: string,
+    queryParams: CommentsQueryParamsDto,
+    userId: string,
+  ) {
     const query = {
       pageSize: Number(queryParams.pageSize) || 10,
       pageNumber: Number(queryParams.pageNumber) || 1,
@@ -38,12 +42,30 @@ export class CommentRepository {
       .limit(query.pageSize)
       .exec();
 
+    const commentViewModel = comments.map((comment) => ({
+      id: comment._id.toString(),
+      content: comment.content,
+      commentatorInfo: {
+        userId: comment.commentatorInfo.userId,
+        userLogin: comment.commentatorInfo.userLogin,
+      },
+      createdAt: comment.createdAt,
+      likesInfo: {
+        likesCount: comment.likesInfo.likesCount,
+        dislikesCount: comment.likesInfo.dislikesCount,
+        myStatus: userId
+          ? comment.likesInfo.users.find((user) => user.userId === userId)
+              ?.likeStatus || 'None'
+          : 'None',
+      },
+    }));
+
     return {
       pagesCount: totalPages,
       page: query.pageNumber,
       pageSize: query.pageSize,
       totalCount: totalComments,
-      items: comments,
+      items: commentViewModel,
     };
   }
 }
