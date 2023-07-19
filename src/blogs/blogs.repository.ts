@@ -104,7 +104,7 @@ export class BlogsRepository {
 
   async findOne(id: string) {
     try {
-      const blog = await this.blogModel.findById(id).exec();
+      const blog = await this.blogModel.findById({ _id: id }).exec();
       if (!blog) {
         return false;
       }
@@ -127,7 +127,7 @@ export class BlogsRepository {
     try {
       const updatedBlog = await this.blogModel
         .findByIdAndUpdate(
-          id,
+          { _id: id },
           {
             $set: updateBlogDto,
           },

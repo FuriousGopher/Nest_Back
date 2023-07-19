@@ -35,6 +35,7 @@ export class BlogsController {
         'name',
       );
     }
+    return result;
   }
 
   @UseGuards(BasicAuthGuard)
@@ -63,6 +64,8 @@ export class BlogsController {
     if (!result) {
       return exceptionHandler(ResultCode.NotFound, 'Blogs not found', 'id');
     }
+
+    return result;
   }
 
   @Get(':id/posts')
