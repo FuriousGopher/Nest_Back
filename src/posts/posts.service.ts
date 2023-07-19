@@ -10,6 +10,8 @@ import { Model } from 'mongoose';
 import { UsersRepository } from '../users/users.repository';
 import { CommentRepository } from '../comments/comment.repository';
 import { CommentsQueryParamsDto } from './dto/comments-query-params.dto';
+import { LikesDto } from './dto/like-status.dto';
+import { Post, PostDocument } from '../db/schemas/posts.schema';
 
 @Injectable()
 export class PostsService {
@@ -19,6 +21,7 @@ export class PostsService {
     protected commentRepository: CommentRepository,
     protected blogsRepository: BlogsRepository,
     @InjectModel(Comment.name) private commentModel: Model<Comment>,
+    @InjectModel(Post.name) private postModel: Model<PostDocument>,
   ) {}
 
   async create(createPostDto: CreatePostDto) {
@@ -26,15 +29,48 @@ export class PostsService {
     if (!blogName) {
       throw new NotFoundException('Blog not found');
     }
-    return this.postsRepository.create(createPostDto, blogName.name);
+    try {
+      const newPost = new this.postModel({
+        title: createPostDto.title,
+        shortDescription: createPostDto.shortDescription,
+        content: createPostDto.content,
+        blogId: createPostDto.blogId,
+        blogName: blogName.name,
+      });
+
+      const savePost = await this.postsRepository.save(newPost);
+
+      return {
+        id: savePost._id.toString(),
+        title: savePost.title,
+        shortDescription: savePost.shortDescription,
+        content: savePost.content,
+        blogId: savePost.blogId,
+        blogName: savePost.blogName,
+        createdAt: savePost.createdAt,
+        extendedLikesInfo: {
+          likesCount: savePost.extendedLikesInfo.likesCount,
+          dislikesCount: savePost.extendedLikesInfo.dislikesCount,
+          myStatus: savePost.extendedLikesInfo.myStatus,
+          newestLikes: [{}],
+        },
+      };
+    } catch (e) {
+      console.error('An error occurred while creating a post:', e);
+
+      return {
+        success: false,
+        message: 'An error occurred while creating a post.',
+      };
+    }
   }
 
-  async findAll(queryParams) {
-    return await this.postsRepository.findAllPosts(queryParams);
+  async findAll(queryParams, userId: string) {
+    return await this.postsRepository.findAllPosts(queryParams, userId);
   }
 
-  findOne(id: string) {
-    return this.postsRepository.findOne(id);
+  findOne(id: string, userId: string) {
+    return this.postsRepository.findOneWitchMapping(id, userId);
   }
 
   updateOne(id: string, updatePostDto: UpdatePostDto) {
@@ -107,5 +143,91 @@ export class PostsService {
       queryParams,
       userId,
     );
+  }
+
+  async putNewLikeStatus(id: string, likeStatusDto: LikesDto, userId: string) {
+    const likeStatus = likeStatusDto.likeStatus;
+
+    const findPost = await this.postsRepository.findOne(id);
+    if (!findPost) return false;
+
+    const user = await this.usersRepository.findOne(userId);
+    if (!user) return false;
+
+    const userLogin = user.accountData.login;
+
+    let likesCount = findPost.extendedLikesInfo.likesCount;
+    let dislikesCount = findPost.extendedLikesInfo.dislikesCount;
+
+    const findUserInLikesInfo = await this.postsRepository.findUserInLikesInfo(
+      id,
+      userId,
+    );
+
+    if (!findUserInLikesInfo) {
+      await this.postsRepository.addUserInLikesInfo(
+        id,
+        userId,
+        userLogin,
+        likeStatus,
+      );
+
+      if (likeStatus === 'Like') {
+        likesCount++;
+      }
+
+      if (likeStatus === 'Dislike') {
+        dislikesCount++;
+      }
+      return this.postsRepository.updateLikesCount(
+        id,
+        likesCount,
+        dislikesCount,
+      );
+    }
+
+    const userLikeDBStatus = await this.postsRepository.findUserLikeStatus(
+      id,
+      userId,
+    );
+
+    switch (userLikeDBStatus) {
+      case 'None':
+        if (likeStatus === 'Like') {
+          likesCount++;
+        }
+
+        if (likeStatus === 'Dislike') {
+          dislikesCount++;
+        }
+
+        break;
+
+      case 'Like':
+        if (likeStatus === 'None') {
+          likesCount--;
+        }
+
+        if (likeStatus === 'Dislike') {
+          likesCount--;
+          dislikesCount++;
+        }
+        break;
+
+      case 'Dislike':
+        if (likeStatus === 'None') {
+          dislikesCount--;
+        }
+
+        if (likeStatus === 'Like') {
+          dislikesCount--;
+          likesCount++;
+        }
+        break;
+    }
+
+    await this.postsRepository.updateLikesCount(id, likesCount, dislikesCount);
+
+    return this.postsRepository.updateLikesStatus(id, userId, likeStatus);
   }
 }

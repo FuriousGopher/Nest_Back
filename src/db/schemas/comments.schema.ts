@@ -44,7 +44,7 @@ export class Comment {
   };
 }
 
-type UserLikes = {
+export type UserLikes = {
   userId: string;
   likeStatus: string;
 };

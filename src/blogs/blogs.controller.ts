@@ -8,6 +8,7 @@ import {
   Query,
   HttpCode,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
@@ -17,15 +18,26 @@ import { PostsQueryParamsDto } from '../posts/dto/posts-query-params.dto';
 import { createPostByBlogIdDto } from './dto/create-post-byBlogId.dto';
 import { exceptionHandler } from '../exceptions/exception.handler';
 import { ResultCode } from '../enums/result-code.enum';
+import { BasicAuthGuard } from '../auth/guards/basic-auth.guard';
+import { UserIdFromHeaders } from '../decorators/user-id-from-headers.decorator';
 @Controller('blogs')
 export class BlogsController {
   constructor(private readonly blogsService: BlogsService) {}
 
+  @UseGuards(BasicAuthGuard)
   @Post()
-  create(@Body() createBlogDto: CreateBlogDto) {
-    return this.blogsService.create(createBlogDto);
+  async create(@Body() createBlogDto: CreateBlogDto) {
+    const result = await this.blogsService.create(createBlogDto);
+    if (!result) {
+      return exceptionHandler(
+        ResultCode.BadRequest,
+        'Blog not created',
+        'name',
+      );
+    }
   }
 
+  @UseGuards(BasicAuthGuard)
   @Post(':id/posts')
   async createPost(
     @Body() createPostDto: createPostByBlogIdDto,
@@ -46,18 +58,23 @@ export class BlogsController {
   }
 
   @Get()
-  findAll(@Query() queryParams: BlogsQueryParamsDto) {
-    return this.blogsService.findAll(queryParams);
+  async findAll(@Query() queryParams: BlogsQueryParamsDto) {
+    const result = await this.blogsService.findAll(queryParams);
+    if (!result) {
+      return exceptionHandler(ResultCode.NotFound, 'Blogs not found', 'id');
+    }
   }
 
   @Get(':id/posts')
   async findAllPosts(
     @Query() queryParams: PostsQueryParamsDto,
     @Param('id') id: string,
+    @UserIdFromHeaders() userId,
   ) {
     const getResultAllPosts = await this.blogsService.findAllPosts(
       queryParams,
       id,
+      userId,
     );
     if (!getResultAllPosts) {
       return exceptionHandler(
@@ -82,6 +99,7 @@ export class BlogsController {
     return resultFindOne;
   }
 
+  @UseGuards(BasicAuthGuard)
   @HttpCode(204)
   @Put(':id')
   async updateOne(
@@ -99,9 +117,17 @@ export class BlogsController {
     return updatedResult;
   }
 
+  @UseGuards(BasicAuthGuard)
   @HttpCode(204)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.blogsService.remove(id);
+  async remove(@Param('id') id: string) {
+    const result = await this.blogsService.remove(id);
+    if (!result) {
+      return exceptionHandler(
+        ResultCode.BadRequest,
+        'Blog with this id not found',
+        'id',
+      );
+    }
   }
 }

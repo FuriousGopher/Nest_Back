@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Blog, BlogDocument } from '../db/schemas/blogs.schema';
 import { Model } from 'mongoose';
@@ -7,17 +7,20 @@ import { BlogsResponseDto } from './dto/blogsResponse.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { Post, PostDocument } from '../db/schemas/posts.schema';
 import { PostsResponseDto } from '../posts/dto/postsResponse.dto';
+import { PostsRepository } from '../posts/posts.repository';
 
 @Injectable()
 export class BlogsRepository {
   constructor(
     @InjectModel(Blog.name) private blogModel: Model<BlogDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    @Inject(PostsRepository)
+    protected postsRepository: PostsRepository,
   ) {}
 
   async findAllBlogs(
     queryParams: BlogsQueryParamsDto,
-  ): Promise<BlogsResponseDto | { message: string } | { success: boolean }> {
+  ): Promise<BlogsResponseDto | boolean> {
     try {
       const {
         searchNameTerm = null,
@@ -67,11 +70,7 @@ export class BlogsRepository {
       return blogsResponse;
     } catch (e) {
       console.error('An error occurred while getting all blogs', e);
-
-      return {
-        success: false,
-        message: 'An error occurred while getting all blogs',
-      };
+      return false;
     }
   }
 
@@ -153,12 +152,9 @@ export class BlogsRepository {
       if (!deletedBlog) {
         throw new NotFoundException('Blog not found');
       }
-      return;
+      return true;
     } catch (e) {
-      console.error('An error occurred while deleting the blog:', e);
-      if (e instanceof NotFoundException) {
-        throw e;
-      }
+      return false;
     }
   }
 
@@ -183,8 +179,8 @@ export class BlogsRepository {
         blogName: createdPost.blogName,
         createdAt: createdPost.createdAt,
         extendedLikesInfo: {
-          likesCount: createdPost.likesInfo.likesCount,
-          dislikesCount: createdPost.likesInfo.dislikesCount,
+          likesCount: createdPost.extendedLikesInfo.likesCount,
+          dislikesCount: createdPost.extendedLikesInfo.dislikesCount,
           myStatus: 'None',
           newestLikes: [
             {
@@ -201,64 +197,61 @@ export class BlogsRepository {
     }
   }
 
-  async findAllPosts(queryParams, blogId): Promise<PostsResponseDto | boolean> {
-    try {
-      const {
-        sortBy = 'createdAt',
-        sortDirection = 'desc',
-        pageNumber = 1,
-        pageSize = 10,
-      } = queryParams;
-
-      const skipCount = (pageNumber - 1) * pageSize;
-      const filter: any = {
-        blogId: blogId,
+  async findAllPosts(
+    queryParams,
+    blogId,
+    userId,
+  ): Promise<{
+    pagesCount: number;
+    pageSize: number;
+    page: number;
+    totalCount: number;
+    items: Awaited<{
+      createdAt: Date;
+      blogName: string;
+      extendedLikesInfo: {
+        likesCount: number;
+        newestLikes: { addedAt: string; login: string; userId: string }[];
+        dislikesCount: number;
+        myStatus: string;
       };
+      id: string;
+      shortDescription: string;
+      title: string;
+      blogId: string;
+      content: string;
+    }>[];
+  }> {
+    const {
+      sortBy = 'createdAt',
+      sortDirection = 'desc',
+      pageNumber = 1,
+      pageSize = 10,
+    } = queryParams;
 
-      const totalCount = await this.postModel.countDocuments(filter).exec();
-      const totalPages = Math.ceil(totalCount / pageSize);
+    const skipCount = (pageNumber - 1) * pageSize;
+    const filter: any = {
+      blogId: blogId,
+    };
 
-      const posts = await this.postModel
-        .find(filter)
-        .sort({ [sortBy]: sortDirection === 'desc' ? -1 : 1 })
-        .skip(skipCount)
-        .limit(pageSize)
-        .exec();
+    const totalCount = await this.postModel.countDocuments(filter).exec();
+    const totalPages = Math.ceil(totalCount / pageSize);
 
-      const postsViewModels = posts.map((post) => ({
-        id: post._id.toString(),
-        title: post.title,
-        shortDescription: post.shortDescription,
-        content: post.content,
-        blogId: post.blogId,
-        blogName: post.blogName,
-        createdAt: post.createdAt.toISOString(),
-        extendedLikesInfo: {
-          likesCount: post.likesInfo.likesCount,
-          dislikesCount: post.likesInfo.dislikesCount,
-          myStatus: 'None',
-          newestLikes: [
-            {
-              addedAt: '',
-              userId: '',
-              login: '',
-            },
-          ],
-        },
-      }));
+    const posts = await this.postModel
+      .find(filter)
+      .sort({ [sortBy]: sortDirection === 'desc' ? -1 : 1 })
+      .skip(skipCount)
+      .limit(pageSize)
+      .exec();
 
-      const postsResponse: PostsResponseDto = {
-        pagesCount: totalPages,
-        page: +pageNumber,
-        pageSize: +pageSize,
-        totalCount: totalCount,
-        items: postsViewModels,
-      };
+    const postsResponse = {
+      pagesCount: totalPages,
+      page: +pageNumber,
+      pageSize: +pageSize,
+      totalCount: totalCount,
+      items: await this.postsRepository.mapGetAllPosts(posts, userId),
+    };
 
-      return postsResponse;
-    } catch (e) {
-      console.error('An error occurred while getting all posts', e);
-      return false;
-    }
+    return postsResponse;
   }
 }

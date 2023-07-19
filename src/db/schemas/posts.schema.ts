@@ -3,6 +3,12 @@ import { HydratedDocument } from 'mongoose';
 
 export type PostDocument = HydratedDocument<Post>;
 
+export type Users = {
+  addedAt: string;
+  userId: string;
+  userLogin: string;
+  likeStatus: string;
+};
 @Schema()
 export class Post {
   @Prop() id: string;
@@ -16,25 +22,15 @@ export class Post {
     raw({
       likesCount: { type: Number },
       dislikesCount: { type: Number },
-      users: {
-        type: {
-          addedAt: { type: String },
-          userId: { type: String },
-          userLogin: { type: String },
-          likeStatus: { type: String },
-        },
-      },
+      myStatus: { type: String },
+      users: { type: Array },
     }),
   )
-  likesInfo: {
+  extendedLikesInfo: {
     likesCount: number;
     dislikesCount: number;
-    users: {
-      addedAt: string;
-      userId: string;
-      userLogin: string;
-      likeStatus: string;
-    };
+    myStatus: string;
+    users: Users[];
   };
 }
 
@@ -42,13 +38,8 @@ export const PostSchema = SchemaFactory.createForClass(Post);
 
 PostSchema.pre<Post>('save', function (next) {
   this.createdAt = new Date();
-  this.likesInfo.likesCount = 0;
-  this.likesInfo.dislikesCount = 0;
-  this.likesInfo.users = {
-    addedAt: '',
-    userId: '',
-    userLogin: '',
-    likeStatus: '',
-  };
+  this.extendedLikesInfo.likesCount = 0;
+  this.extendedLikesInfo.dislikesCount = 0;
+  this.extendedLikesInfo.myStatus = 'None';
   next();
 });

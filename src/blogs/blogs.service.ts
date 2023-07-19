@@ -1,8 +1,7 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { BlogsRepository } from './blogs.repository';
-import { th } from 'date-fns/locale';
 
 @Injectable()
 export class BlogsService {
@@ -19,16 +18,16 @@ export class BlogsService {
     return this.blogsRepository.findAllBlogs(queryParams);
   }
 
-  async findAllPosts(queryParams, id) {
+  async findAllPosts(queryParams, id, userId) {
     const checkForBlogId = await this.blogsRepository.findOne(id);
     if (!checkForBlogId) {
-      throw new NotFoundException(`Blog with id ${id} not found`);
+      return false;
     }
-    const allPostsResult = await this.blogsRepository.findAllPosts(
+    return await this.blogsRepository.findAllPosts(
       queryParams,
       checkForBlogId.id,
+      userId,
     );
-    return allPostsResult;
   }
 
   async createPostByBlogId(createPostDto, blogId) {

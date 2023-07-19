@@ -24,12 +24,12 @@ export class TokensCreate implements ICommandHandler<TokensCreateCommand> {
 
     const accessToken = this.jwtService.sign(accessTokenPayload, {
       secret: this.configService.get('SECRET_KEY'),
-      expiresIn: '15m',
+      expiresIn: '10h',
     });
 
     const refreshToken = this.jwtService.sign(refreshTokenPayload, {
       secret: this.configService.get('SECRET_KEY'),
-      expiresIn: '10m',
+      expiresIn: '10h',
     });
 
     return {

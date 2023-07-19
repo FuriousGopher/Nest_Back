@@ -14,6 +14,29 @@ export class CommentRepository {
     return newComment.save();
   }
 
+  async findOne(id: string, userId: string) {
+    const result = await this.commentModel.findOne({ _id: id }).exec();
+    if (!result) return false;
+    let status;
+    if (userId) {
+      status = await this.findUserLikeStatus(id, userId);
+    }
+    return {
+      id: result._id.toString(),
+      content: result.content,
+      commentatorInfo: {
+        userId: result.commentatorInfo.userId,
+        userLogin: result.commentatorInfo.userLogin,
+      },
+      createdAt: result.createdAt,
+      likesInfo: {
+        likesCount: result.likesInfo.likesCount,
+        dislikesCount: result.likesInfo.dislikesCount,
+        myStatus: status || 'None',
+      },
+    };
+  }
+
   async findAllComments(
     id: string,
     queryParams: CommentsQueryParamsDto,
@@ -67,5 +90,79 @@ export class CommentRepository {
       totalCount: totalComments,
       items: commentViewModel,
     };
+  }
+
+  async findUserInLikesInfo(id: string, userId) {
+    const result = await this.commentModel
+      .findOne({ _id: id, 'likesInfo.users.userId': userId })
+      .exec();
+    if (!result) return false;
+    return result;
+  }
+
+  async addUserInLikesInfo(id: string, userId, likeStatus: string) {
+    const result = await this.commentModel.updateOne(
+      { _id: id },
+      {
+        $push: {
+          'likesInfo.users': {
+            userId,
+            likeStatus,
+          },
+        },
+      },
+    );
+    return result.matchedCount === 1;
+  }
+
+  updateLikesCount(id: string, likesCount: number, dislikesCount: number) {
+    return this.commentModel.updateOne(
+      { _id: id },
+      {
+        $set: {
+          'likesInfo.likesCount': likesCount,
+          'likesInfo.dislikesCount': dislikesCount,
+        },
+      },
+    );
+  }
+
+  async findUserLikeStatus(id: string, userId) {
+    const result = await this.commentModel
+      .findOne({ _id: id, 'likesInfo.users.userId': userId })
+      .exec();
+    if (!result || result.likesInfo.users.length === 0) {
+      return null;
+    }
+
+    return result.likesInfo.users[0].likeStatus;
+  }
+
+  updateLikesStatus(id: string, userId, likeStatus: string) {
+    return this.commentModel.updateOne(
+      { _id: id, 'likesInfo.users.userId': userId },
+      {
+        $set: {
+          'likesInfo.users.$.likeStatus': likeStatus,
+        },
+      },
+    );
+  }
+
+  async findById(id: string) {
+    return Promise.resolve(undefined);
+  }
+
+  async remove(id: string) {
+    const result = await this.commentModel.deleteOne({ _id: id });
+    return result.deletedCount === 1;
+  }
+
+  async update(id: string, content: string | undefined) {
+    const result = await this.commentModel.updateOne(
+      { _id: id },
+      { $set: { content } },
+    );
+    return result.matchedCount === 1;
   }
 }

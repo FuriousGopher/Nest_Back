@@ -1,26 +1,98 @@
 import { Injectable } from '@nestjs/common';
-import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
+import { CommentRepository } from './comment.repository';
+import { LikesDto } from '../posts/dto/like-status.dto';
 
 @Injectable()
 export class CommentsService {
-  create(createCommentDto: CreateCommentDto) {
-    return 'This action adds a new comment';
+  constructor(protected commentRepository: CommentRepository) {}
+
+  async updateLikeStatus(id: string, likesDto: LikesDto, userId: string) {
+    const user = await this.commentRepository.findUserInLikesInfo(id, userId);
+
+    const foundComment = await this.commentRepository.findOne(id, userId);
+    if (!foundComment) return false;
+
+    const like = likesDto.likeStatus;
+
+    let likesCount = foundComment.likesInfo.likesCount;
+    let dislikesCount = foundComment.likesInfo.dislikesCount;
+
+    if (!user) {
+      await this.commentRepository.addUserInLikesInfo(id, userId, like);
+
+      if (like === 'Like') {
+        likesCount++;
+      }
+
+      if (like === 'Dislike') {
+        dislikesCount++;
+      }
+      return this.commentRepository.updateLikesCount(
+        id,
+        likesCount,
+        dislikesCount,
+      );
+    }
+
+    const checkLikeStatus = await this.commentRepository.findUserLikeStatus(
+      id,
+      userId,
+    );
+
+    switch (checkLikeStatus) {
+      case 'None':
+        if (like === 'Like') {
+          likesCount++;
+        }
+
+        if (like === 'Dislike') {
+          dislikesCount++;
+        }
+
+        break;
+
+      case 'Like':
+        if (like === 'None') {
+          likesCount--;
+        }
+
+        if (like === 'Dislike') {
+          likesCount--;
+          dislikesCount++;
+        }
+        break;
+
+      case 'Dislike':
+        if (like === 'None') {
+          dislikesCount--;
+        }
+
+        if (like === 'Like') {
+          dislikesCount--;
+          likesCount++;
+        }
+        break;
+    }
+
+    await this.commentRepository.updateLikesCount(
+      id,
+      likesCount,
+      dislikesCount,
+    );
+
+    return this.commentRepository.updateLikesStatus(id, userId, like);
   }
 
-  findAll() {
-    return `This action returns all comments`;
+  async update(id: string, updateCommentDto: UpdateCommentDto) {
+    return await this.commentRepository.update(id, updateCommentDto.content);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} comment`;
+  async remove(id: string) {
+    return await this.commentRepository.remove(id);
   }
 
-  update(id: number, updateCommentDto: UpdateCommentDto) {
-    return `This action updates a #${id} comment`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} comment`;
+  async findById(id: string, userId: string) {
+    return await this.commentRepository.findOne(id, userId);
   }
 }

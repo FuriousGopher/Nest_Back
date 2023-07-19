@@ -3,7 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Post, PostDocument } from '../db/schemas/posts.schema';
 import { Model } from 'mongoose';
 import { PostsQueryParamsDto } from './dto/posts-query-params.dto';
-import { PostsResponseDto } from './dto/postsResponse.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
 @Injectable()
@@ -12,7 +11,28 @@ export class PostsRepository {
 
   async findAllPosts(
     queryParams: PostsQueryParamsDto,
-  ): Promise<PostsResponseDto | { message: string } | { success: boolean }> {
+    userId: string,
+  ): Promise<{
+    pagesCount: number;
+    pageSize: number;
+    page: number;
+    totalCount: number;
+    items: Awaited<{
+      createdAt: Date;
+      blogName: string;
+      extendedLikesInfo: {
+        likesCount: number;
+        newestLikes: { addedAt: string; login: string; userId: string }[];
+        dislikesCount: number;
+        myStatus: string;
+      };
+      id: any;
+      shortDescription: string;
+      title: string;
+      blogId: string;
+      content: string;
+    }>[];
+  }> {
     try {
       const {
         sortBy = 'createdAt',
@@ -34,88 +54,72 @@ export class PostsRepository {
         .limit(pageSize)
         .exec();
 
-      const postsViewModels = posts.map((post) => ({
-        id: post._id.toString(),
-        title: post.title,
-        shortDescription: post.shortDescription,
-        content: post.content,
-        blogId: post.blogId,
-        blogName: post.blogName,
-        createdAt: post.createdAt.toISOString(),
-        extendedLikesInfo: {
-          likesCount: post.likesInfo.likesCount,
-          dislikesCount: post.likesInfo.dislikesCount,
-          myStatus: 'None',
-          newestLikes: [
-            {
-              addedAt: '',
-              userId: '',
-              login: '',
-            },
-          ],
-        },
-      }));
-
-      const postsResponse: PostsResponseDto = {
+      const postsResponse = {
         pagesCount: totalPages,
         page: +pageNumber,
         pageSize: +pageSize,
         totalCount: totalCount,
-        items: postsViewModels,
+        items: await this.mapGetAllPosts(posts, userId),
       };
 
       return postsResponse;
     } catch (e) {
       console.error('An error occurred while getting all posts', e);
 
-      return {
-        success: false,
-        message: 'An error occurred while getting all posts',
-      };
+      throw e;
     }
   }
 
-  async create(createPostDto, blogName) {
-    try {
-      const newPost = new this.postModel({
-        title: createPostDto.title,
-        shortDescription: createPostDto.shortDescription,
-        content: createPostDto.content,
-        blogId: createPostDto.blogId,
-        blogName: blogName,
-      });
+  async mapGetAllPosts(array: PostDocument[], userId?: string) {
+    return Promise.all(
+      array.map(async (post) => {
+        let status;
 
-      const createdPost = await newPost.save();
+        if (userId) {
+          status = await this.findUserLikeStatus(post._id.toString(), userId);
+        }
+        const likesArray =
+          post.extendedLikesInfo && post.extendedLikesInfo.users
+            ? post.extendedLikesInfo.users
+            : [];
+        const likesCountCheck = post.extendedLikesInfo
+          ? post.extendedLikesInfo.likesCount
+          : 0;
+        const dislikeCountCheck = post.extendedLikesInfo
+          ? post.extendedLikesInfo.dislikesCount
+          : 0;
 
-      return {
-        id: createdPost._id.toString(),
-        title: createdPost.title,
-        shortDescription: createdPost.shortDescription,
-        content: createdPost.content,
-        blogId: createdPost.blogId,
-        blogName: createdPost.blogName,
-        createdAt: createdPost.createdAt,
-        extendedLikesInfo: {
-          likesCount: createdPost.likesInfo.likesCount,
-          dislikesCount: createdPost.likesInfo.dislikesCount,
-          myStatus: 'None',
-          newestLikes: [
-            {
-              addedAt: '',
-              userId: '',
-              login: '',
-            },
-          ],
-        },
-      };
-    } catch (e) {
-      console.error('An error occurred while creating a post:', e);
+        return {
+          id: post._id.toString(),
+          title: post.title,
+          shortDescription: post.shortDescription,
+          content: post.content,
+          blogId: post.blogId,
+          blogName: post.blogName,
+          createdAt: post.createdAt,
+          extendedLikesInfo: {
+            likesCount: likesCountCheck,
+            dislikesCount: dislikeCountCheck,
+            myStatus: status || 'None',
+            newestLikes: likesArray
+              .filter((post) => post.likeStatus === 'Like') /// will show only likes TODO
+              .sort((a, b) => -a.addedAt.localeCompare(b.addedAt))
+              .map((post) => {
+                return {
+                  addedAt: post.addedAt.toString(),
+                  userId: post.userId,
+                  login: post.userLogin,
+                };
+              })
+              .splice(0, 3),
+          },
+        };
+      }),
+    );
+  }
 
-      return {
-        success: false,
-        message: 'An error occurred while creating a post.',
-      };
-    }
+  async save(newPost: PostDocument) {
+    return await newPost.save();
   }
 
   async findOne(id: string) {
@@ -133,8 +137,8 @@ export class PostsRepository {
         blogName: post.blogName,
         createdAt: post.createdAt,
         extendedLikesInfo: {
-          likesCount: post.likesInfo.likesCount,
-          dislikesCount: post.likesInfo.dislikesCount,
+          likesCount: post.extendedLikesInfo.likesCount,
+          dislikesCount: post.extendedLikesInfo.dislikesCount,
           myStatus: 'None',
           newestLikes: [
             {
@@ -165,14 +169,12 @@ export class PostsRepository {
         .exec();
 
       if (!updatedPost) {
-        throw new NotFoundException('Post not found');
+        return false;
       }
 
       return;
     } catch (e) {
-      console.error('An error occurred while updating the post:', e);
-
-      throw new NotFoundException();
+      return false;
     }
   }
 
@@ -182,29 +184,107 @@ export class PostsRepository {
       if (!deletedPost) {
         throw new NotFoundException('Post not found');
       }
-      return;
+      return true;
     } catch (e) {
-      console.error('An error occurred while deleting the post:', e);
-      if (e instanceof NotFoundException) {
-        throw e;
-      }
+      return false;
     }
   }
 
-  async createComment(id: string, content: string, userId: string) {
+  async findUserInLikesInfo(postId: string, userId: string) {
+    const result = await this.postModel.findOne({
+      _id: postId,
+      'extendedLikesInfo.users.userId': userId,
+    });
+    return !!result;
+  }
+
+  async addUserInLikesInfo(
+    id: string,
+    userId: string,
+    userLogin: string,
+    likeStatus: string,
+  ) {
+    const result = await this.postModel
+      .findOneAndUpdate(
+        {
+          _id: id,
+        },
+        {
+          $push: {
+            'extendedLikesInfo.users': {
+              addedAt: new Date(),
+              userId: userId,
+              userLogin: userLogin,
+              likeStatus: likeStatus,
+            },
+          },
+        },
+      )
+      .exec();
+    if (!result) return false;
+    return result;
+  }
+
+  updateLikesCount(id: string, likesCount: any, dislikesCount: any) {
+    return this.postModel
+      .findByIdAndUpdate(
+        { _id: id },
+        {
+          $set: {
+            'extendedLikesInfo.likesCount': likesCount,
+            'extendedLikesInfo.dislikesCount': dislikesCount,
+          },
+        },
+      )
+      .exec();
+  }
+
+  async findUserLikeStatus(id: string, userId) {
+    const result = await this.postModel
+      .findOne({
+        _id: id,
+        'extendedLikesInfo.users.userId': userId,
+      })
+      .exec();
+
+    if (
+      !result ||
+      !result.extendedLikesInfo ||
+      !result.extendedLikesInfo.users
+    ) {
+      return 'None';
+    }
+
+    return result.extendedLikesInfo.users[0].likeStatus;
+  }
+
+  updateLikesStatus(id: string, userId, likeStatus: string) {
+    return this.postModel
+      .findOneAndUpdate(
+        {
+          _id: id,
+          'extendedLikesInfo.users.userId': userId,
+        },
+        {
+          $set: {
+            'extendedLikesInfo.users.$.likeStatus': likeStatus,
+          },
+        },
+      )
+      .exec();
+  }
+
+  async findOneWitchMapping(id: string, userId: string) {
     try {
-      const post = await this.postModel.findById({ _id: id });
+      const post = await this.postModel.findById(id);
       if (!post) {
         return false;
       }
-
-      await post.save();
-      return;
+      const mappedPost = await this.mapGetAllPosts([post], userId);
+      return mappedPost[0];
     } catch (e) {
-      console.error('An error occurred while creating a comment:', e);
-      if (e instanceof NotFoundException) {
-        throw e;
-      }
+      console.error('An error occurred while getting post ', e);
+      return false;
     }
   }
 }

@@ -8,9 +8,7 @@ import {
   Query,
   HttpCode,
   Put,
-  NotFoundException,
   UseGuards,
-  NestMiddleware,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -24,7 +22,7 @@ import { CommentsQueryParamsDto } from './dto/comments-query-params.dto';
 import { UserIdFromHeaders } from '../decorators/user-id-from-headers.decorator';
 import { JwtBearerGuard } from '../auth/guards/jwt-bearer.guard';
 import { BasicAuthGuard } from '../auth/guards/basic-auth.guard';
-import { TokenParserMiddleware } from '../middlewares/token-parser.middleware';
+import { LikesDto } from './dto/like-status.dto';
 
 @Controller('posts')
 export class PostsController {
@@ -35,25 +33,36 @@ export class PostsController {
   async create(@Body() createPostDto: CreatePostDto) {
     const resultCreated = await this.postsService.create(createPostDto);
     if (!resultCreated) {
-      throw new NotFoundException(`Post not created`);
+      return exceptionHandler(
+        ResultCode.BadRequest,
+        `Blog with this ${createPostDto.blogId} not found`,
+        'id',
+      );
     }
     return resultCreated;
   }
 
   @Get()
-  async findAll(@Query() queryParams: PostsQueryParamsDto) {
-    const result = await this.postsService.findAll(queryParams);
+  async findAll(
+    @Query() queryParams: PostsQueryParamsDto,
+    @UserIdFromHeaders() userId,
+  ) {
+    const result = await this.postsService.findAll(queryParams, userId);
     if (!result) {
-      throw new NotFoundException(`Posts not found`);
+      return exceptionHandler(ResultCode.NotFound, `Posts not found`, 'all');
     }
     return result;
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    const resultFindOne = await this.postsService.findOne(id);
+  async findOne(@Param('id') id: string, @UserIdFromHeaders() userId) {
+    const resultFindOne = await this.postsService.findOne(id, userId);
     if (!resultFindOne) {
-      throw new NotFoundException(`Post with id ${id} not found`);
+      return exceptionHandler(
+        ResultCode.NotFound,
+        `Post with this ${id} not found`,
+        'id',
+      );
     }
     return resultFindOne;
   }
@@ -61,15 +70,29 @@ export class PostsController {
   @UseGuards(BasicAuthGuard)
   @HttpCode(204)
   @Put(':id')
-  update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
-    return this.postsService.updateOne(id, updatePostDto);
+  async update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
+    const result = await this.postsService.updateOne(id, updatePostDto);
+    if (!result) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        `Post with this ${id} not found`,
+        'id',
+      );
+    }
   }
 
   @UseGuards(BasicAuthGuard)
   @HttpCode(204)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.postsService.remove(id);
+  async remove(@Param('id') id: string) {
+    const result = await this.postsService.remove(id);
+    if (!result) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        `Post with this ${id} not found`,
+        'id',
+      );
+    }
   }
 
   ////Comments
@@ -116,16 +139,20 @@ export class PostsController {
     }
     return result;
   }
-  /*
+
+  @HttpCode(204)
   @UseGuards(JwtBearerGuard)
-  @UseGuards(JwtRefreshGuard)
   @Put(':id/comments/like-status')
   async changeLikeStatus(
     @Param('id') id: string,
     @Body() likeStatusDto: LikesDto,
     @UserIdFromGuard() userId,
   ) {
-    const result = await this.postsService.changeLikeStatus(id, likeStatusDto);
+    const result = await this.postsService.putNewLikeStatus(
+      id,
+      likeStatusDto,
+      userId,
+    );
     if (!result) {
       return exceptionHandler(
         ResultCode.NotFound,
@@ -134,5 +161,5 @@ export class PostsController {
       );
     }
     return result;
-  }*/
+  }
 }
