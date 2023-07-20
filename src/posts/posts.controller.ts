@@ -140,10 +140,10 @@ export class PostsController {
     return result;
   }
 
-  @HttpCode(204)
   @UseGuards(JwtBearerGuard)
-  @Put(':id/comments/like-status')
-  async changeLikeStatus(
+  @Put(':id/like-status')
+  @HttpCode(204)
+  async makeLikeStatus(
     @Param('id') id: string,
     @Body() likeStatusDto: LikesDto,
     @UserIdFromGuard() userId,

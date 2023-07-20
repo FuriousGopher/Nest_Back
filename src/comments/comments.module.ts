@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { CommentsController } from './comments.controller';
 import { BasicStrategy } from '../auth/strategies/basic.strategy';
@@ -14,6 +14,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Comment, CommentSchema } from '../db/schemas/comments.schema';
 import { AuthModule } from '../auth/auth.module';
+import { TokenParserMiddleware } from '../middlewares/token-parser.middleware';
 
 const strategies = [
   BasicStrategy,
@@ -35,4 +36,8 @@ const strategies = [
   providers: [CommentsService, ...strategies, CommentRepository, ConfigService],
   exports: [CommentRepository],
 })
-export class CommentsModule {}
+export class CommentsModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TokenParserMiddleware).forRoutes('*');
+  }
+}

@@ -17,7 +17,8 @@ import { JwtRefreshTokenStrategy } from '../auth/strategies/jwt-refresh.strategy
 import { AuthModule } from '../auth/auth.module';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TokenParserMiddleware } from '../middlewares/token-parser.middleware';
-import { JwtModule, JwtService } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
+import { IsBlogExistConstraint } from '../decorators/blog-exists.decorator';
 
 const strategies = [
   BasicStrategy,
@@ -46,6 +47,7 @@ const strategies = [
     UsersRepository,
     BlogsRepository,
     ...strategies,
+    IsBlogExistConstraint,
   ],
 })
 export class PostsModule implements NestModule {

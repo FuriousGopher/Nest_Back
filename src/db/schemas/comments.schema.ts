@@ -26,7 +26,7 @@ export class Comment {
   postId: string;
 
   @Prop()
-  createdAt: Date;
+  createdAt: string;
 
   @Prop(
     raw({
@@ -52,6 +52,6 @@ export type UserLikes = {
 export const CommentSchema = SchemaFactory.createForClass(Comment);
 
 CommentSchema.pre<Comment>('save', function (next) {
-  this.createdAt = new Date();
+  this.createdAt = new Date().toISOString();
   next();
 });

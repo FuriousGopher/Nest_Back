@@ -14,7 +14,7 @@ export class CommentRepository {
     return newComment.save();
   }
 
-  async findOne(id: string, userId: string) {
+  async findById(id: string, userId: string) {
     const result = await this.commentModel.findOne({ _id: id }).exec();
     if (!result) return false;
     let status;
@@ -35,6 +35,12 @@ export class CommentRepository {
         myStatus: status || 'None',
       },
     };
+  }
+
+  async findOne(id: string) {
+    const result = await this.commentModel.findById({ _id: id }).exec();
+    if (!result) return false;
+    return result;
   }
 
   async findAllComments(
@@ -147,10 +153,6 @@ export class CommentRepository {
         },
       },
     );
-  }
-
-  async findById(id: string) {
-    return Promise.resolve(undefined);
   }
 
   async remove(id: string) {

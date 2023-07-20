@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PostsRepository } from './posts.repository';
@@ -52,7 +52,7 @@ export class PostsService {
           likesCount: savePost.extendedLikesInfo.likesCount,
           dislikesCount: savePost.extendedLikesInfo.dislikesCount,
           myStatus: savePost.extendedLikesInfo.myStatus,
-          newestLikes: [{}],
+          newestLikes: [],
         },
       };
     } catch (e) {
@@ -88,6 +88,7 @@ export class PostsService {
   ) {
     const findPost = await this.postsRepository.findOne(id);
     const user = await this.usersRepository.findOne(userId);
+    if (!user) return false;
 
     if (!findPost) return false;
 
@@ -95,7 +96,7 @@ export class PostsService {
       content: createCommentDto.content,
       commentatorInfo: {
         userId: userId,
-        userLogin: user!.accountData.login,
+        userLogin: user.accountData.login,
       },
       postId: id,
       likesInfo: {
@@ -147,10 +148,8 @@ export class PostsService {
 
   async putNewLikeStatus(id: string, likeStatusDto: LikesDto, userId: string) {
     const likeStatus = likeStatusDto.likeStatus;
-
     const findPost = await this.postsRepository.findOne(id);
     if (!findPost) return false;
-
     const user = await this.usersRepository.findOne(userId);
     if (!user) return false;
 

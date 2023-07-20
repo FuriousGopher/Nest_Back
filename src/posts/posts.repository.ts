@@ -9,30 +9,7 @@ import { UpdatePostDto } from './dto/update-post.dto';
 export class PostsRepository {
   constructor(@InjectModel(Post.name) private postModel: Model<PostDocument>) {}
 
-  async findAllPosts(
-    queryParams: PostsQueryParamsDto,
-    userId: string,
-  ): Promise<{
-    pagesCount: number;
-    pageSize: number;
-    page: number;
-    totalCount: number;
-    items: Awaited<{
-      createdAt: Date;
-      blogName: string;
-      extendedLikesInfo: {
-        likesCount: number;
-        newestLikes: { addedAt: string; login: string; userId: string }[];
-        dislikesCount: number;
-        myStatus: string;
-      };
-      id: any;
-      shortDescription: string;
-      title: string;
-      blogId: string;
-      content: string;
-    }>[];
-  }> {
+  async findAllPosts(queryParams: PostsQueryParamsDto, userId: string) {
     try {
       const {
         sortBy = 'createdAt',
@@ -54,15 +31,13 @@ export class PostsRepository {
         .limit(pageSize)
         .exec();
 
-      const postsResponse = {
+      return {
         pagesCount: totalPages,
         page: +pageNumber,
         pageSize: +pageSize,
         totalCount: totalCount,
         items: await this.mapGetAllPosts(posts, userId),
       };
-
-      return postsResponse;
     } catch (e) {
       console.error('An error occurred while getting all posts', e);
 
@@ -102,7 +77,7 @@ export class PostsRepository {
             dislikesCount: dislikeCountCheck,
             myStatus: status || 'None',
             newestLikes: likesArray
-              .filter((post) => post.likeStatus === 'Like') /// will show only likes TODO
+              .filter((post) => post.likeStatus === 'Like')
               .sort((a, b) => -a.addedAt.localeCompare(b.addedAt))
               .map((post) => {
                 return {
@@ -123,44 +98,14 @@ export class PostsRepository {
   }
 
   async findOne(id: string) {
-    try {
-      const post = await this.postModel.findById({ _id: id });
-      if (!post) {
-        return false;
-      }
-      return {
-        id: post._id.toString(),
-        title: post.title,
-        shortDescription: post.shortDescription,
-        content: post.content,
-        blogId: post.blogId,
-        blogName: post.blogName,
-        createdAt: post.createdAt,
-        extendedLikesInfo: {
-          likesCount: post.extendedLikesInfo.likesCount,
-          dislikesCount: post.extendedLikesInfo.dislikesCount,
-          myStatus: 'None',
-          newestLikes: [
-            {
-              addedAt: '',
-              userId: '',
-              login: '',
-            },
-          ],
-        },
-      };
-    } catch (e) {
-      console.error('An error occurred while getting post ', e);
-
-      return false;
-    }
+    return await this.postModel.findById({ _id: id }).exec();
   }
 
   async updateOne(id: string, updatePostDto: UpdatePostDto) {
     try {
       const updatedPost = await this.postModel
         .findByIdAndUpdate(
-          id,
+          { _id: id },
           {
             $set: updatePostDto,
           },
@@ -172,7 +117,7 @@ export class PostsRepository {
         return false;
       }
 
-      return;
+      return true;
     } catch (e) {
       return false;
     }
@@ -212,7 +157,7 @@ export class PostsRepository {
         {
           $push: {
             'extendedLikesInfo.users': {
-              addedAt: new Date(),
+              addedAt: new Date().toISOString(),
               userId: userId,
               userLogin: userLogin,
               likeStatus: likeStatus,

@@ -113,7 +113,11 @@ export class UsersRepository {
   }
 
   async findOne(id: string) {
-    return this.userModel.findById({ _id: id });
+    const user = await this.userModel.findById({ _id: id });
+    if (!user) {
+      return false;
+    }
+    return user;
   }
 
   async saveNewUser(newUser: UserDocument) {
@@ -163,10 +167,11 @@ export class UsersRepository {
   ) {
     try {
       const user = await this.findOne(id);
-      user!.emailConfirmation.confirmationCode = newConfirmationCode;
-      user!.emailConfirmation.expirationDate = newExpirationDate;
-      user!.emailConfirmation.isConfirmed = false;
-      await user?.save();
+      if (!user) return false;
+      user.emailConfirmation.confirmationCode = newConfirmationCode;
+      user.emailConfirmation.expirationDate = newExpirationDate;
+      user.emailConfirmation.isConfirmed = false;
+      await user.save();
       return true;
     } catch (e) {
       console.error(

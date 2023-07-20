@@ -6,7 +6,6 @@ import { BlogsQueryParamsDto } from './dto/blogs-query-params.dto';
 import { BlogsResponseDto } from './dto/blogsResponse.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { Post, PostDocument } from '../db/schemas/posts.schema';
-import { PostsResponseDto } from '../posts/dto/postsResponse.dto';
 import { PostsRepository } from '../posts/posts.repository';
 
 @Injectable()
@@ -182,13 +181,7 @@ export class BlogsRepository {
           likesCount: createdPost.extendedLikesInfo.likesCount,
           dislikesCount: createdPost.extendedLikesInfo.dislikesCount,
           myStatus: 'None',
-          newestLikes: [
-            {
-              addedAt: '',
-              userId: '',
-              login: '',
-            },
-          ],
+          newestLikes: [],
         },
       };
     } catch (e) {
@@ -197,31 +190,7 @@ export class BlogsRepository {
     }
   }
 
-  async findAllPosts(
-    queryParams,
-    blogId,
-    userId,
-  ): Promise<{
-    pagesCount: number;
-    pageSize: number;
-    page: number;
-    totalCount: number;
-    items: Awaited<{
-      createdAt: Date;
-      blogName: string;
-      extendedLikesInfo: {
-        likesCount: number;
-        newestLikes: { addedAt: string; login: string; userId: string }[];
-        dislikesCount: number;
-        myStatus: string;
-      };
-      id: string;
-      shortDescription: string;
-      title: string;
-      blogId: string;
-      content: string;
-    }>[];
-  }> {
+  async findAllPosts(queryParams, blogId, userId) {
     const {
       sortBy = 'createdAt',
       sortDirection = 'desc',
@@ -244,14 +213,12 @@ export class BlogsRepository {
       .limit(pageSize)
       .exec();
 
-    const postsResponse = {
+    return {
       pagesCount: totalPages,
       page: +pageNumber,
       pageSize: +pageSize,
       totalCount: totalCount,
       items: await this.postsRepository.mapGetAllPosts(posts, userId),
     };
-
-    return postsResponse;
   }
 }

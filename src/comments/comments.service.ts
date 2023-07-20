@@ -10,7 +10,7 @@ export class CommentsService {
   async updateLikeStatus(id: string, likesDto: LikesDto, userId: string) {
     const user = await this.commentRepository.findUserInLikesInfo(id, userId);
 
-    const foundComment = await this.commentRepository.findOne(id, userId);
+    const foundComment = await this.commentRepository.findById(id, userId);
     if (!foundComment) return false;
 
     const like = likesDto.likeStatus;
@@ -92,7 +92,17 @@ export class CommentsService {
     return await this.commentRepository.remove(id);
   }
 
-  async findById(id: string, userId: string) {
-    return await this.commentRepository.findOne(id, userId);
+  async findById(id: string) {
+    return await this.commentRepository.findOne(id);
+  }
+
+  async findOne(id: string, userId: string) {
+    return await this.commentRepository.findById(id, userId);
+  }
+
+  async checkOwner(commentId: string, userId: string) {
+    const comment = await this.commentRepository.findOne(commentId);
+    if (!comment) return false;
+    return comment.commentatorInfo.userId === userId;
   }
 }

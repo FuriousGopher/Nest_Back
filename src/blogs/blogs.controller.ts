@@ -50,7 +50,7 @@ export class BlogsController {
     );
     if (!createResult) {
       return exceptionHandler(
-        ResultCode.BadRequest,
+        ResultCode.NotFound,
         'Blog with this id not found',
         'id',
       );
@@ -112,7 +112,7 @@ export class BlogsController {
     const updatedResult = await this.blogsService.updateOne(id, updateBlogDto);
     if (!updatedResult) {
       return exceptionHandler(
-        ResultCode.BadRequest,
+        ResultCode.NotFound,
         'Blog with this id not found',
         'id',
       );
@@ -127,7 +127,7 @@ export class BlogsController {
     const result = await this.blogsService.remove(id);
     if (!result) {
       return exceptionHandler(
-        ResultCode.BadRequest,
+        ResultCode.NotFound,
         'Blog with this id not found',
         'id',
       );

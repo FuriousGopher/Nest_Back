@@ -1,4 +1,3 @@
-/*
 import {
   registerDecorator,
   ValidationOptions,
@@ -6,14 +5,14 @@ import {
   ValidatorConstraintInterface,
 } from 'class-validator';
 import { Injectable } from '@nestjs/common';
-import { BlogsRepository } from '../../api/infrastructure/repositories/blogs/blogs.repository';
+import { BlogsRepository } from '../blogs/blogs.repository';
 
 @ValidatorConstraint({ name: 'isBlogExist', async: true })
 @Injectable()
 export class IsBlogExistConstraint implements ValidatorConstraintInterface {
   constructor(private readonly blogsRepository: BlogsRepository) {}
   async validate(blogId: string) {
-    const blog = await this.blogsRepository.findBlog(blogId);
+    const blog = await this.blogsRepository.findOne(blogId);
 
     if (!blog) {
       return false;
@@ -34,4 +33,3 @@ export const isBlogExist =
       validator: IsBlogExistConstraint,
     });
   };
-*/

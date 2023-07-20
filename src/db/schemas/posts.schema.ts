@@ -17,7 +17,7 @@ export class Post {
   @Prop() content: string;
   @Prop() blogId: string;
   @Prop() blogName: string;
-  @Prop() createdAt: Date;
+  @Prop() createdAt: string;
   @Prop(
     raw({
       likesCount: { type: Number },
@@ -37,7 +37,7 @@ export class Post {
 export const PostSchema = SchemaFactory.createForClass(Post);
 
 PostSchema.pre<Post>('save', function (next) {
-  this.createdAt = new Date();
+  this.createdAt = new Date().toISOString();
   this.extendedLikesInfo.likesCount = 0;
   this.extendedLikesInfo.dislikesCount = 0;
   this.extendedLikesInfo.myStatus = 'None';
