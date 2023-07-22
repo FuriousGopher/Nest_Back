@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { RecoveryEmailDto } from './dto/recoveryEmail.dto';
 import { NewPasswordDto } from './dto/new-password.dto';
 import { ConfirmationCodeDto } from './dto/confirmation-code.dto';
@@ -32,6 +32,11 @@ import {
   emailField,
   userNotFoundOrConfirmed,
 } from '../exceptions/exception.constants';
+import { SecurityService } from '../security/security.service';
+import { JwtService } from '@nestjs/jwt';
+import { UserIdFromHeaders } from '../decorators/user-id-from-headers.decorator';
+import { JwtBearerGuard } from './guards/jwt-bearer.guard';
+import { ThrottleLogin } from '../decorators/throttle.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -39,6 +44,8 @@ export class AuthController {
     private readonly authService: AuthService,
     private commandBus: CommandBus,
     private readonly usersRepository: UsersRepository,
+    private readonly securityService: SecurityService,
+    private readonly jwtService: JwtService,
   ) {}
 
   @HttpCode(204)
@@ -58,16 +65,29 @@ export class AuthController {
     );
   }
 
-  @UseGuards(ThrottlerGuard)
-  @UseGuards(LocalAuthGuard)
-  @Post('login') //work
+  @ThrottleLogin(5, 10)
+  @UseGuards(ThrottlerGuard, LocalAuthGuard)
+  @Post('login')
   @HttpCode(200)
-  async login(@Request() req, @Res({ passthrough: true }) res: Response) {
-    const userId = req.user.id;
-    /*const userAgent = headers['user-agent'] || 'unknown';*/
+  async login(
+    @Request() req,
+    @Res({ passthrough: true }) res: Response,
+    @UserIdFromGuard() userId,
+    @Ip() ip,
+    @Headers() headers,
+  ) {
+    const userAgent = headers['user-agent'] || 'unknown';
+
     const tokens = await this.commandBus.execute(
       new TokensCreateCommand(userId),
     );
+
+    await this.securityService.saveDeviceForLogin(
+      tokens.refreshToken,
+      ip,
+      userAgent,
+    );
+
     res
       .cookie('refreshToken', tokens.refreshToken, {
         httpOnly: true,
@@ -77,7 +97,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtRefreshGuard)
-  @Post('refresh-token') /// work
+  @Post('refresh-token')
   @HttpCode(200)
   async refreshToken(
     @UserIdFromGuard() userId,
@@ -86,9 +106,17 @@ export class AuthController {
     @RefreshToken() refreshToken,
     @Res({ passthrough: true }) res: Response,
   ) {
+    const userAgent = headers['user-agent'] || 'unknown';
+    const decodedToken: any = this.jwtService.decode(refreshToken);
+    const deviceId = decodedToken.deviceId;
+
     const tokens = await this.commandBus.execute(
-      new TokensCreateCommand(userId),
+      new TokensCreateCommand(userId, deviceId),
     );
+
+    const newToken = this.jwtService.decode(tokens.refreshToken);
+
+    await this.securityService.updateRefToken(newToken, ip, userAgent);
 
     res
       .cookie('refreshToken', tokens.refreshToken, {
@@ -115,6 +143,7 @@ export class AuthController {
     return result;
   }
 
+  @UseGuards(ThrottlerGuard)
   @Post('registration-email-resending') /// work
   @HttpCode(204)
   async emailResending(@Body() emailResendingDto: RecoveryEmailDto) {
@@ -139,22 +168,18 @@ export class AuthController {
   }
 
   @UseGuards(JwtRefreshGuard)
-  @Post('logout') /// work
+  @Post('logout')
   @HttpCode(204)
-  async logout(@Res() res) {
-    res
-      .cookie('refreshToken', '', {
-        httpOnly: true,
-        secure: true,
-      })
-      .json({ accessToken: '' });
+  async logout(@RefreshToken() refreshToken) {
+    const decodedToken: any = this.jwtService.decode(refreshToken);
+    const deviceId = decodedToken.deviceId;
+    return this.securityService.deviceDelete(deviceId);
   }
 
-  @UseGuards(JwtRefreshGuard)
-  @Get('me') /// work
-  async getMe(@UserIdFromGuard() userId) {
+  @UseGuards(JwtBearerGuard)
+  @Get('me')
+  async getMe(@UserIdFromHeaders() userId) {
     const user = await this.usersRepository.findOne(userId);
-
     if (!user) throw new Error('User not found');
 
     return {

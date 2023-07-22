@@ -1,4 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common'; // throttle.decorator.ts
+
 import { exceptionObjectType } from './types/exception-object.type';
 
 export const customExceptionFactory = (errors) => {

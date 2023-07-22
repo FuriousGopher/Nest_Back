@@ -128,10 +128,7 @@ export class UsersRepository {
     const foundLogin = await this.userModel.findOne({
       'accountData.login': login,
     });
-    if (foundLogin) {
-      return true;
-    }
-    return false;
+    return !!foundLogin;
   }
 
   async deleteUser(id: string) {

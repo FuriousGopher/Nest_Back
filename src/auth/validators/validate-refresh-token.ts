@@ -1,6 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { UsersRepository } from '../../users/users.repository';
-import { JwtService } from '@nestjs/jwt';
+import { DevicesRepository } from '../../security/devices.repository';
 
 export class ValidateRefreshTokenCommand {
   constructor(public payload: any) {}
@@ -10,17 +9,17 @@ export class ValidateRefreshTokenCommand {
 export class ValidateRefreshToken
   implements ICommandHandler<ValidateRefreshTokenCommand>
 {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  constructor(private readonly devicesRepository: DevicesRepository) {}
 
   async execute(command: ValidateRefreshTokenCommand) {
-    const userId = command.payload.sub;
+    const device = await this.devicesRepository.findDevice(
+      command.payload.deviceId,
+    );
 
-    const user = this.usersRepository.findOne(userId);
-
-    if (!user) {
-      return false;
+    if (!device || command.payload.iat < device.lastActiveDate) {
+      return null;
     }
 
-    return user;
+    return device;
   }
 }

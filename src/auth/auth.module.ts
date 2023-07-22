@@ -19,6 +19,9 @@ import { ValidateRefreshToken } from './validators/validate-refresh-token';
 import { UsersRepository } from '../users/users.repository';
 import { IsLoginExistConstraint } from '../decorators/unique-login.decorator';
 import { IsEmailExistConstraint } from '../decorators/unique-email.decorator';
+import { SecurityModule } from '../security/security.module';
+import { DevicesRepository } from '../security/devices.repository';
+import { Device, DeviceSchema } from '../db/schemas/device.schema';
 
 const strategies = [
   BasicStrategy,
@@ -38,8 +41,10 @@ const strategies = [
     ConfigModule,
     UsersModule,
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([{ name: Device.name, schema: DeviceSchema }]), // Import MongooseModule with Device model
     MailModule,
     CqrsModule,
+    SecurityModule,
   ],
   controllers: [AuthController],
   providers: [
@@ -50,6 +55,7 @@ const strategies = [
     UsersRepository,
     IsLoginExistConstraint,
     IsEmailExistConstraint,
+    DevicesRepository,
     ValidateRefreshToken,
   ],
   exports: [AuthService, TokensCreate, ValidateRefreshToken],
