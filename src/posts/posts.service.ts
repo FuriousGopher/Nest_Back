@@ -7,7 +7,7 @@ import { CreateCommentDto } from '../comments/dto/create-comment.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Comment } from '../db/schemas/comments.schema';
 import { Model } from 'mongoose';
-import { UsersRepository } from '../users/users.repository';
+import { SaRepository } from '../sa/sa.repository';
 import { CommentRepository } from '../comments/comment.repository';
 import { CommentsQueryParamsDto } from './dto/comments-query-params.dto';
 import { LikesDto } from './dto/like-status.dto';
@@ -17,7 +17,7 @@ import { Post, PostDocument } from '../db/schemas/posts.schema';
 export class PostsService {
   constructor(
     protected postsRepository: PostsRepository,
-    protected usersRepository: UsersRepository,
+    protected usersRepository: SaRepository,
     protected commentRepository: CommentRepository,
     protected blogsRepository: BlogsRepository,
     @InjectModel(Comment.name) private commentModel: Model<Comment>,

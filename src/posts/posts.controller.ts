@@ -45,7 +45,7 @@ export class PostsController {
   @Get()
   async findAll(
     @Query() queryParams: PostsQueryParamsDto,
-    @UserIdFromHeaders() userId,
+    @UserIdFromHeaders() userId: any,
   ) {
     const result = await this.postsService.findAll(queryParams, userId);
     if (!result) {

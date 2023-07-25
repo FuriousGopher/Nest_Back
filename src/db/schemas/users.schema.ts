@@ -21,27 +21,40 @@ export class User {
     login: string;
     email: string;
     passwordHash: string;
-    createdAt: Date;
+    createdAt: string;
     isMembership: boolean;
   };
   @Prop(
     raw({
       confirmationCode: { type: String || null },
-      expirationDate: { type: Date || null },
+      expirationDate: { type: String || null },
       isConfirmed: { type: Boolean },
     }),
   )
   emailConfirmation: {
     confirmationCode: string | null;
-    expirationDate: Date | null;
+    expirationDate: string | null;
     isConfirmed: boolean;
+  };
+  @Prop(
+    raw({
+      isBanned: { type: Boolean },
+      banDate: { type: String || null },
+      banReason: { type: String || null },
+    }),
+  )
+  banInfo: {
+    isBanned: boolean;
+    banDate: string | null;
+    banReason: string | null;
   };
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
 
 UserSchema.pre<User>('save', function (next) {
-  this.accountData.createdAt = new Date();
+  this.accountData.createdAt = new Date().toString();
   this.accountData.isMembership = false;
+  this.banInfo.isBanned = false;
   next();
 });

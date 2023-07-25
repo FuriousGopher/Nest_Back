@@ -30,6 +30,6 @@ const strategies = [
   ],
   controllers: [BlogsController],
   providers: [BlogsService, BlogsRepository, ...strategies, PostsRepository],
-  exports: [BlogsRepository],
+  exports: [BlogsRepository, BlogsService],
 })
 export class BlogsModule {}

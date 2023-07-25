@@ -1,43 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from '../db/schemas/users.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { UserQueryParamsDto } from './dto/userQueryParams.dto';
 import { UsersResponseDto } from './dto/usersResponse.dto';
-import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
-export class UsersRepository {
+export class SaRepository {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
-  async createUserBySA(createUserDto: CreateUserDto, passwordHash) {
-    try {
-      const newUser = new this.userModel({
-        accountData: {
-          login: createUserDto.login,
-          email: createUserDto.email,
-          passwordHash: passwordHash,
-        },
-        emailConfirmation: {
-          isConfirmed: true,
-        },
-      });
-
-      await newUser.save();
-
-      return {
-        id: newUser._id.toString(),
-        login: newUser.accountData.login,
-        email: newUser.accountData.email,
-        createdAt: newUser.accountData.createdAt.toISOString(),
-      };
-    } catch (e) {
-      console.error(
-        `An error occurred while creating a user ${createUserDto.login} in repo`,
-        e,
-      );
-      return false;
-    }
+  async saveUser(newUser: UserDocument) {
+    return await newUser.save();
   }
 
   async getAllUsers(
@@ -96,7 +69,12 @@ export class UsersRepository {
         id: user._id.toString(),
         login: user.accountData.login,
         email: user.accountData.email,
-        createdAt: user.accountData.createdAt.toISOString(),
+        createdAt: user.accountData.createdAt,
+        banInfo: {
+          isBanned: user.banInfo.isBanned,
+          banDate: user.banInfo.banDate,
+          banReason: user.banInfo.banReason,
+        },
       }));
 
       return {
@@ -107,13 +85,15 @@ export class UsersRepository {
         items: userViewModels,
       };
     } catch (error) {
-      console.error('An error occurred while getting all users', error);
+      console.error('An error occurred while getting all sa', error);
       return false;
     }
   }
 
   async findOne(id: string) {
-    const user = await this.userModel.findById({ _id: id });
+    if (!Types.ObjectId.isValid(id)) return false;
+    const convertedId = new Types.ObjectId(id);
+    const user = await this.userModel.findById(convertedId);
     if (!user) {
       return false;
     }
@@ -160,7 +140,7 @@ export class UsersRepository {
   async updateEmailConfirmationData(
     id: string,
     newConfirmationCode: string,
-    newExpirationDate: Date,
+    newExpirationDate: string,
   ) {
     try {
       const user = await this.findOne(id);
@@ -199,5 +179,22 @@ export class UsersRepository {
         { 'accountData.email': loginOrEmail },
       ],
     });
+  }
+
+  async unBanUser(id: string, banStatus: boolean, banReason: string) {
+    try {
+      const result = await this.userModel.findByIdAndUpdate(
+        { _id: id },
+        {
+          'banInfo.isBanned': banStatus,
+          'banInfo.banDate': new Date().toString(),
+          'banInfo.banReason': banReason,
+        },
+      );
+      return result;
+    } catch (e) {
+      console.error('An error occurred while unbanning user:', e);
+      return false;
+    }
   }
 }

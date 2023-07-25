@@ -9,7 +9,7 @@ import { CommentRepository } from './comment.repository';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { UsersModule } from '../users/users.module';
+import { SaModule } from '../sa/sa.module';
 import { CqrsModule } from '@nestjs/cqrs';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Comment, CommentSchema } from '../db/schemas/comments.schema';
@@ -27,7 +27,7 @@ const strategies = [
     PassportModule,
     JwtModule,
     ConfigModule,
-    UsersModule,
+    SaModule,
     CqrsModule,
     MongooseModule.forFeature([{ name: Comment.name, schema: CommentSchema }]),
     AuthModule,

@@ -23,7 +23,7 @@ import { CommandBus } from '@nestjs/cqrs';
 import { TokensCreateCommand } from './tokens/tokens-create';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { RefreshToken } from '../decorators/refresh-token.decorator';
-import { UsersRepository } from '../users/users.repository';
+import { SaRepository } from '../sa/sa.repository';
 import { exceptionHandler } from '../exceptions/exception.handler';
 import { ResultCode } from '../enums/result-code.enum';
 import {
@@ -43,7 +43,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private commandBus: CommandBus,
-    private readonly usersRepository: UsersRepository,
+    private readonly usersRepository: SaRepository,
     private readonly securityService: SecurityService,
     private readonly jwtService: JwtService,
   ) {}

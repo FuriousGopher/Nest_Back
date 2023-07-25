@@ -6,7 +6,7 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
-import { UsersRepository } from '../users/users.repository';
+import { SaRepository } from '../sa/sa.repository';
 import { BadRequestException } from '@nestjs/common';
 import {
   confirmCodeField,
@@ -19,7 +19,7 @@ import { exceptionHandler } from '../exceptions/exception.handler';
 export class IsConfirmationCodeValidConstraint
   implements ValidatorConstraintInterface
 {
-  constructor(private usersRepository: UsersRepository) {
+  constructor(private usersRepository: SaRepository) {
     console.log(this.usersRepository);
   }
 

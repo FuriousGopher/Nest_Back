@@ -1,5 +1,6 @@
 import { HydratedDocument } from 'mongoose';
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Prop, raw, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Users } from './posts.schema';
 
 export type BlogDocument = HydratedDocument<Blog>;
 
@@ -15,6 +16,16 @@ export class Blog {
   websiteUrl: string;
   @Prop()
   createdAt: string;
+  @Prop(
+    raw({
+      userId: { type: String },
+      userLogin: { type: String },
+    }),
+  )
+  blogOwnerInfo: {
+    userId: string;
+    userLogin: string;
+  };
   @Prop()
   isMembership: boolean;
 }

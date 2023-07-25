@@ -9,14 +9,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtBearerStrategy } from './strategies/jwt-bearer.strategy';
 import { JwtRefreshTokenStrategy } from './strategies/jwt-refresh.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
-import { UsersModule } from '../users/users.module';
+import { SaModule } from '../sa/sa.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from '../db/schemas/users.schema';
 import { CqrsModule } from '@nestjs/cqrs';
 import { MailModule } from '../utils/mailer/mail.module';
 import { TokensCreate } from './tokens/tokens-create';
 import { ValidateRefreshToken } from './validators/validate-refresh-token';
-import { UsersRepository } from '../users/users.repository';
+import { SaRepository } from '../sa/sa.repository';
 import { IsLoginExistConstraint } from '../decorators/unique-login.decorator';
 import { IsEmailExistConstraint } from '../decorators/unique-email.decorator';
 import { SecurityModule } from '../security/security.module';
@@ -39,9 +39,8 @@ const strategies = [
     PassportModule,
     JwtModule,
     ConfigModule,
-    UsersModule,
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
-    MongooseModule.forFeature([{ name: Device.name, schema: DeviceSchema }]), // Import MongooseModule with Device model
+    MongooseModule.forFeature([{ name: Device.name, schema: DeviceSchema }]),
     MailModule,
     CqrsModule,
     SecurityModule,
@@ -52,7 +51,7 @@ const strategies = [
     ...strategies,
     TokensCreate,
     ConfigService,
-    UsersRepository,
+    SaRepository,
     IsLoginExistConstraint,
     IsEmailExistConstraint,
     DevicesRepository,

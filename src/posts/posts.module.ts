@@ -4,7 +4,7 @@ import { PostsController } from './posts.controller';
 import { PostsService } from './posts.service';
 import { PostsRepository } from './posts.repository';
 import { CommentRepository } from '../comments/comment.repository';
-import { UsersRepository } from '../users/users.repository';
+import { SaRepository } from '../sa/sa.repository';
 import { BlogsRepository } from '../blogs/blogs.repository';
 import { Comment, CommentSchema } from '../db/schemas/comments.schema';
 import { Post, PostSchema } from '../db/schemas/posts.schema';
@@ -44,7 +44,7 @@ const strategies = [
     PostsService,
     PostsRepository,
     CommentRepository,
-    UsersRepository,
+    SaRepository,
     BlogsRepository,
     ...strategies,
     IsBlogExistConstraint,

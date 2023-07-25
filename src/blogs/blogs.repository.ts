@@ -58,15 +58,13 @@ export class BlogsRepository {
         isMembership: blog.isMembership,
       }));
 
-      const blogsResponse: BlogsResponseDto = {
+      return {
         pagesCount: totalPages,
         page: +pageNumber,
         pageSize: +pageSize,
         totalCount: totalCount,
         items: blogsViewModels,
       };
-
-      return blogsResponse;
     } catch (e) {
       console.error('An error occurred while getting all blogs', e);
       return false;
@@ -75,10 +73,12 @@ export class BlogsRepository {
 
   async create(createBlogDto) {
     try {
+      const ownerId = 'test potom peredelat';
       const newBlog = new this.blogModel({
         name: createBlogDto.name,
         description: createBlogDto.description,
         websiteUrl: createBlogDto.websiteUrl,
+        ownerId: ownerId,
       });
 
       const createdBlog = await newBlog.save();
@@ -98,6 +98,14 @@ export class BlogsRepository {
         success: false,
         message: 'An error occurred while creating a blog.',
       };
+    }
+  }
+
+  async findBlog(id: string) {
+    try {
+      return await this.blogModel.findById({ _id: id }).exec();
+    } catch (e) {
+      return false;
     }
   }
 
@@ -219,6 +227,67 @@ export class BlogsRepository {
       pageSize: +pageSize,
       totalCount: totalCount,
       items: await this.postsRepository.mapGetAllPosts(posts, userId),
+    };
+  }
+
+  async bindBlog(id: string, userId: string, userLogin: string) {
+    return this.blogModel.findByIdAndUpdate(
+      { _id: id },
+      {
+        'blogOwnerInfo.userId': userId,
+        'blogOwnerInfo.userLogin': userLogin,
+      },
+    );
+  }
+
+  async findAllBlogsForSA(queryParams: BlogsQueryParamsDto) {
+    const {
+      searchNameTerm = null,
+      sortBy = 'createdAt',
+      sortDirection = 'desc',
+      pageNumber = 1,
+      pageSize = 10,
+    } = queryParams;
+
+    const skipCount = (pageNumber - 1) * pageSize;
+    const filter: any = {};
+
+    if (searchNameTerm) {
+      filter['name'] = {
+        $regex: searchNameTerm,
+        $options: 'i',
+      };
+    }
+
+    const totalCount = await this.blogModel.countDocuments(filter).exec();
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    const blogs = await this.blogModel
+      .find(filter)
+      .sort({ [sortBy]: sortDirection === 'desc' ? -1 : 1 })
+      .skip(skipCount)
+      .limit(pageSize)
+      .exec();
+
+    const blogsViewModels = blogs.map((blog) => ({
+      id: blog._id.toString(),
+      name: blog.name,
+      description: blog.description,
+      websiteUrl: blog.websiteUrl,
+      createdAt: blog.createdAt,
+      isMembership: blog.isMembership,
+      blogOwnerInfo: {
+        userId: blog.blogOwnerInfo.userId,
+        userLogin: blog.blogOwnerInfo.userLogin,
+      },
+    }));
+
+    return {
+      pagesCount: totalPages,
+      page: +pageNumber,
+      pageSize: +pageSize,
+      totalCount: totalCount,
+      items: blogsViewModels,
     };
   }
 }
