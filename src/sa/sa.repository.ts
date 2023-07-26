@@ -17,17 +17,22 @@ export class SaRepository {
     queryParams: UserQueryParamsDto,
   ): Promise<UsersResponseDto | boolean> {
     try {
-      const query = {
+      const query: UserQueryParamsDto = {
         pageSize: Number(queryParams.pageSize) || 10,
         pageNumber: Number(queryParams.pageNumber) || 1,
         sortBy: queryParams.sortBy ?? 'createdAt',
         sortDirection: queryParams.sortDirection ?? 'desc',
         searchEmailTerm: queryParams.searchEmailTerm ?? null,
         searchLoginTerm: queryParams.searchLoginTerm ?? null,
+        banStatus: queryParams.banStatus, // No need to use a default value here since it's handled later.
       };
 
       const skipCount = (query.pageNumber - 1) * query.pageSize;
       const filter: any = {};
+
+      if (query.banStatus !== undefined) {
+        filter['banInfo.isBanned'] = query.banStatus;
+      }
 
       if (query.searchLoginTerm || query.searchEmailTerm) {
         filter.$or = [];
@@ -85,7 +90,7 @@ export class SaRepository {
         items: userViewModels,
       };
     } catch (error) {
-      console.error('An error occurred while getting all sa', error);
+      console.error('An error occurred while getting all users', error);
       return false;
     }
   }

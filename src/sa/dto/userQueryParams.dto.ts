@@ -3,6 +3,7 @@ export class UserQueryParamsDto {
   sortBy: string;
   sortDirection: string;
   pageNumber: number;
-  pageSize: string;
+  pageSize: number;
   searchLoginTerm: string;
+  banStatus: string;
 }

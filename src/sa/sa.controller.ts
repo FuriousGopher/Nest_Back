@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   HttpCode,
-  NotFoundException,
   Param,
   Post,
   Put,
@@ -18,16 +17,12 @@ import { BasicAuthGuard } from '../auth/guards/basic-auth.guard';
 import { exceptionHandler } from '../exceptions/exception.handler';
 import { ResultCode } from '../enums/result-code.enum';
 import { BanUserDto } from './dto/ban-user.dto';
-import { BlogsRepository } from '../blogs/blogs.repository';
 import { BlogsQueryParamsDto } from '../blogs/dto/blogs-query-params.dto';
 
 @UseGuards(BasicAuthGuard)
 @Controller('sa')
 export class SaController {
-  constructor(
-    protected saService: SaService,
-    protected blogsRepository: BlogsRepository,
-  ) {}
+  constructor(protected saService: SaService) {}
 
   @Get('users')
   async getUsers(@Query() queryParams: UserQueryParamsDto) {

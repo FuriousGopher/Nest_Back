@@ -8,6 +8,7 @@ import { Model } from 'mongoose';
 import { BanUserDto } from './dto/ban-user.dto';
 import { BlogsRepository } from '../blogs/blogs.repository';
 import { BlogsQueryParamsDto } from '../blogs/dto/blogs-query-params.dto';
+import { UserQueryParamsDto } from './dto/userQueryParams.dto';
 
 @Injectable()
 export class SaService {
@@ -18,7 +19,7 @@ export class SaService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
 
-  getAllUsers(queryParams) {
+  getAllUsers(queryParams: UserQueryParamsDto) {
     return this.saRepository.getAllUsers(queryParams);
   }
 
