@@ -49,6 +49,7 @@ const strategies = [
     ...strategies,
     IsBlogExistConstraint,
   ],
+  exports: [PostsRepository, PostsService],
 })
 export class PostsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

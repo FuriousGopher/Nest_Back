@@ -2,6 +2,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { BlogsRepository } from './blogs.repository';
+import { PostsQueryParamsDto } from 'src/posts/dto/posts-query-params.dto';
+import { BlogsQueryParamsDto } from './dto/blogs-query-params.dto';
+import { createPostByBlogIdDto } from './dto/create-post-byBlogId.dto';
 
 @Injectable()
 export class BlogsService {
@@ -14,12 +17,16 @@ export class BlogsService {
     return this.blogsRepository.create(createBlogDto);
   }
 
-  findAll(queryParams) {
+  findAll(queryParams: BlogsQueryParamsDto) {
     return this.blogsRepository.findAllBlogs(queryParams);
   }
 
-  async findAllPosts(queryParams, id, userId) {
-    const checkForBlogId = await this.blogsRepository.findOne(id);
+  async findAllPosts(
+    queryParams: PostsQueryParamsDto,
+    id: string,
+    userId: string,
+  ) {
+    const checkForBlogId = await this.blogsRepository.findById(id);
     if (!checkForBlogId) {
       return false;
     }
@@ -30,8 +37,29 @@ export class BlogsService {
     );
   }
 
-  async createPostByBlogId(createPostDto, blogId) {
-    const checkForBlogId = await this.blogsRepository.findOne(blogId);
+  async findAllPostsForBlogger(
+    queryParams: PostsQueryParamsDto,
+    id: string,
+    userId: string,
+  ) {
+    const checkForBlogId = await this.blogsRepository.findById(id);
+
+    if (!checkForBlogId) {
+      return false;
+    }
+
+    return await this.blogsRepository.findAllPosts(
+      queryParams,
+      checkForBlogId.id,
+      userId,
+    );
+  }
+
+  async createPostByBlogId(
+    createPostDto: createPostByBlogIdDto,
+    blogId: string,
+  ) {
+    const checkForBlogId = await this.blogsRepository.findById(blogId);
     if (!checkForBlogId) {
       return false;
     }
@@ -44,7 +72,7 @@ export class BlogsService {
   }
 
   findOne(id: string) {
-    return this.blogsRepository.findOne(id);
+    return this.blogsRepository.findById(id);
   }
 
   async updateOne(id: string, updateBlogDto: UpdateBlogDto) {
@@ -53,5 +81,13 @@ export class BlogsService {
 
   remove(id: string) {
     return this.blogsRepository.remove(id);
+  }
+
+  async checkOwner(userId: string, blogId: string) {
+    const findBlog = await this.blogsRepository.findOne(blogId);
+    if (!findBlog) {
+      return false;
+    }
+    return findBlog.blogOwnerInfo.userId === userId;
   }
 }

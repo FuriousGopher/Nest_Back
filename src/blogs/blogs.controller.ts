@@ -72,7 +72,7 @@ export class BlogsController {
   async findAllPosts(
     @Query() queryParams: PostsQueryParamsDto,
     @Param('id') id: string,
-    @UserIdFromHeaders() userId,
+    @UserIdFromHeaders() userId: any,
   ) {
     const getResultAllPosts = await this.blogsService.findAllPosts(
       queryParams,

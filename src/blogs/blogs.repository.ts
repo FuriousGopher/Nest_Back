@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Blog, BlogDocument } from '../db/schemas/blogs.schema';
 import { Model } from 'mongoose';
@@ -7,6 +7,8 @@ import { BlogsResponseDto } from './dto/blogsResponse.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { Post, PostDocument } from '../db/schemas/posts.schema';
 import { PostsRepository } from '../posts/posts.repository';
+import { PostsQueryParamsDto } from 'src/posts/dto/posts-query-params.dto';
+import { CreateBlogDto } from './dto/create-blog.dto';
 
 @Injectable()
 export class BlogsRepository {
@@ -71,7 +73,7 @@ export class BlogsRepository {
     }
   }
 
-  async create(createBlogDto) {
+  async create(createBlogDto: CreateBlogDto) {
     try {
       const ownerId = 'test potom peredelat';
       const newBlog = new this.blogModel({
@@ -109,7 +111,7 @@ export class BlogsRepository {
     }
   }
 
-  async findOne(id: string) {
+  async findById(id: string) {
     try {
       const blog = await this.blogModel.findById({ _id: id }).exec();
       if (!blog) {
@@ -130,9 +132,23 @@ export class BlogsRepository {
     }
   }
 
+  async findOne(id: string) {
+    try {
+      const blog = await this.blogModel.findById({ _id: id }).exec();
+      if (!blog) {
+        return false;
+      }
+      return blog;
+    } catch (e) {
+      console.error('An error occurred while getting the blog:', e);
+
+      return false;
+    }
+  }
+
   async updateOne(id: string, updateBlogDto: UpdateBlogDto) {
     try {
-      const updatedBlog = await this.blogModel
+      return await this.blogModel
         .findByIdAndUpdate(
           { _id: id },
           {
@@ -141,12 +157,6 @@ export class BlogsRepository {
           { new: true },
         )
         .exec();
-
-      if (!updatedBlog) {
-        return false;
-      }
-
-      return true;
     } catch (e) {
       console.error('An error occurred while updating the blog:', e);
       return false;
@@ -155,17 +165,17 @@ export class BlogsRepository {
 
   async remove(id: string) {
     try {
-      const deletedBlog = await this.blogModel.findByIdAndDelete(id).exec();
-      if (!deletedBlog) {
-        throw new NotFoundException('Blog not found');
-      }
-      return true;
+      return await this.blogModel.findByIdAndDelete(id).exec();
     } catch (e) {
       return false;
     }
   }
 
-  async createPostByBlogId(createPostDto, blogId, blogName) {
+  async createPostByBlogId(
+    createPostDto: { title: any; shortDescription: any; content: any },
+    blogId: any,
+    blogName: string,
+  ) {
     try {
       const newPost = new this.postModel({
         title: createPostDto.title,
@@ -198,7 +208,11 @@ export class BlogsRepository {
     }
   }
 
-  async findAllPosts(queryParams, blogId, userId) {
+  async findAllPosts(
+    queryParams: PostsQueryParamsDto,
+    blogId: string,
+    userId: string | undefined,
+  ) {
     const {
       sortBy = 'createdAt',
       sortDirection = 'desc',
@@ -289,5 +303,66 @@ export class BlogsRepository {
       totalCount: totalCount,
       items: blogsViewModels,
     };
+  }
+
+  async findAllOwenBlogs(queryParams: BlogsQueryParamsDto, userId: string) {
+    try {
+      const {
+        searchNameTerm = null,
+        sortBy = 'createdAt',
+        sortDirection = 'desc',
+        pageNumber = 1,
+        pageSize = 10,
+      } = queryParams;
+
+      const skipCount = (pageNumber - 1) * pageSize;
+      const filter: any = { 'blogOwnerInfo.userId': userId };
+
+      if (searchNameTerm) {
+        filter['name'] = {
+          $regex: searchNameTerm,
+          $options: 'i',
+        };
+      }
+
+      const totalCount = await this.blogModel.countDocuments(filter).exec();
+      const totalPages = Math.ceil(totalCount / pageSize);
+
+      const blogs = await this.blogModel
+        .find(filter)
+        .sort({ [sortBy]: sortDirection === 'desc' ? -1 : 1 })
+        .skip(skipCount)
+        .limit(pageSize)
+        .exec();
+
+      const blogsViewModels = blogs.map((blog) => ({
+        id: blog._id.toString(),
+        name: blog.name,
+        description: blog.description,
+        websiteUrl: blog.websiteUrl,
+        createdAt: blog.createdAt,
+        isMembership: blog.isMembership,
+      }));
+
+      return {
+        pagesCount: totalPages,
+        page: +pageNumber,
+        pageSize: +pageSize,
+        totalCount: totalCount,
+        items: blogsViewModels,
+      };
+    } catch (e) {
+      console.error('An error occurred while getting all blogs', e);
+      return false;
+    }
+  }
+
+  async save(newBlog: BlogDocument) {
+    try {
+      return await newBlog.save();
+    } catch (e) {
+      console.error('An error occurred while saving the blog', e);
+      return false;
+    }
   }
 }

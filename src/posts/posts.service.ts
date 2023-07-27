@@ -25,7 +25,7 @@ export class PostsService {
   ) {}
 
   async create(createPostDto: CreatePostDto) {
-    const blogName = await this.blogsRepository.findOne(createPostDto.blogId);
+    const blogName = await this.blogsRepository.findById(createPostDto.blogId);
     if (!blogName) {
       throw new NotFoundException('Blog not found');
     }
