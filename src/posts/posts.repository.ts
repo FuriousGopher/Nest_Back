@@ -82,7 +82,6 @@ export class PostsRepository {
             return true;
           });
 
-          // Update likesArray with filtered likes (excluding banned users' likes)
           likesArray.splice(0, likesArray.length, ...bannedUserLikes);
         }
 

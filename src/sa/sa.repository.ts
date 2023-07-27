@@ -16,7 +16,8 @@ export class SaRepository {
   async checkUserBanStatus(id: string) {
     try {
       const user = await this.userModel.findById(id);
-      return !user!.banInfo.isBanned;
+      if (!user) return true;
+      if (user.banInfo.isBanned === false || null) return true;
     } catch (e) {
       console.error('An error occurred while checking ban status:', e);
       return false;

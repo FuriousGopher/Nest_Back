@@ -21,7 +21,6 @@ import { BlogsService } from '../blogs/blogs.service';
 import { CreateBlogDto } from '../blogs/dto/create-blog.dto';
 import { createPostByBlogIdDto } from '../blogs/dto/create-post-byBlogId.dto';
 import { UpdateBlogDto } from '../blogs/dto/update-blog.dto';
-import { UpdatePostDto } from '../posts/dto/update-post.dto';
 import { PostsService } from '../posts/posts.service';
 import { UpdatePostByBloggerDto } from './dto/update-post-by-blogger.dto';
 
@@ -162,8 +161,17 @@ export class BloggerController {
     @UserIdFromHeaders() userId: string,
   ) {
     const findPost = await this.postsService.findOne(postId);
-
     if (!findPost) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Post with this id not found',
+        'id',
+      );
+    }
+
+    const checkBlogId = await this.blogsService.findOne(blogId);
+
+    if (!checkBlogId) {
       return exceptionHandler(
         ResultCode.NotFound,
         'Blog with this id not found',
@@ -223,6 +231,16 @@ export class BloggerController {
     const findPost = await this.postsService.findOne(postId);
 
     if (!findPost) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Post with this id not found',
+        'id',
+      );
+    }
+
+    const checkBlogId = await this.blogsService.findOne(blogId);
+
+    if (!checkBlogId) {
       return exceptionHandler(
         ResultCode.NotFound,
         'Blog with this id not found',

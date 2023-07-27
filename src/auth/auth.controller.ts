@@ -7,7 +7,6 @@ import {
   Ip,
   Post,
   UseGuards,
-  Request,
   Res,
 } from '@nestjs/common';
 import { Response } from 'express';
@@ -65,8 +64,8 @@ export class AuthController {
     );
   }
 
-  @ThrottleLogin(5, 10)
-  @UseGuards(ThrottlerGuard, LocalAuthGuard)
+  /*@ThrottleLogin(5, 10)*/
+  @UseGuards(/*ThrottlerGuard*/ LocalAuthGuard)
   @Post('login')
   @HttpCode(200)
   async login(
@@ -160,7 +159,7 @@ export class AuthController {
   }
 
   @HttpCode(204)
-  @UseGuards(ThrottlerGuard)
+  /*@UseGuards(ThrottlerGuard)*/
   @Post('registration')
   async registration(@Body() registrationDto: RegistrationDto) {
     return await this.authService.registration(registrationDto);

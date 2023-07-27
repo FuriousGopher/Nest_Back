@@ -103,14 +103,11 @@ export class PostsController {
     @Body() createCommentDto: CreateCommentDto,
     @UserIdFromHeaders() userId: any,
   ) {
-    console.log('userId', userId);
-    console.log('id', id);
     const resultCreated = await this.postsService.createComment(
       id,
       createCommentDto,
       userId,
     );
-    console.log('resultCreated', resultCreated);
     if (!resultCreated) {
       return exceptionHandler(
         ResultCode.NotFound,

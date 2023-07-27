@@ -53,7 +53,7 @@ export class User {
 export const UserSchema = SchemaFactory.createForClass(User);
 
 UserSchema.pre<User>('save', function (next) {
-  this.accountData.createdAt = new Date().toString();
+  this.accountData.createdAt = new Date().toISOString();
   this.accountData.isMembership = false;
   this.banInfo.isBanned = false;
   this.banInfo.banDate = null;

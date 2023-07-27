@@ -26,7 +26,7 @@ export class CommentRepository {
 
     const checkBanStatus = await this.saRepository.checkUserBanStatus(userId);
 
-    if (checkBanStatus) {
+    if (!checkBanStatus) {
       return false;
     }
 
