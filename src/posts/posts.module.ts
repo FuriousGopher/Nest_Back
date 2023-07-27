@@ -4,7 +4,6 @@ import { PostsController } from './posts.controller';
 import { PostsService } from './posts.service';
 import { PostsRepository } from './posts.repository';
 import { CommentRepository } from '../comments/comment.repository';
-import { SaRepository } from '../sa/sa.repository';
 import { BlogsRepository } from '../blogs/blogs.repository';
 import { Comment, CommentSchema } from '../db/schemas/comments.schema';
 import { Post, PostSchema } from '../db/schemas/posts.schema';
@@ -19,6 +18,8 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { TokenParserMiddleware } from '../middlewares/token-parser.middleware';
 import { JwtModule } from '@nestjs/jwt';
 import { IsBlogExistConstraint } from '../decorators/blog-exists.decorator';
+import { SaModule } from '../sa/sa.module';
+import { SaRepository } from '../sa/sa.repository';
 
 const strategies = [
   BasicStrategy,
@@ -44,10 +45,10 @@ const strategies = [
     PostsService,
     PostsRepository,
     CommentRepository,
-    SaRepository,
     BlogsRepository,
     ...strategies,
     IsBlogExistConstraint,
+    SaRepository,
   ],
   exports: [PostsRepository, PostsService],
 })

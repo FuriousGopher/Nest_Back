@@ -13,6 +13,16 @@ export class SaRepository {
     return await newUser.save();
   }
 
+  async checkUserBanStatus(id: string) {
+    try {
+      const user = await this.userModel.findById(id);
+      return !user!.banInfo.isBanned;
+    } catch (e) {
+      console.error('An error occurred while checking ban status:', e);
+      return false;
+    }
+  }
+
   async getAllUsers(
     queryParams: UserQueryParamsDto,
   ): Promise<UsersResponseDto | boolean> {
@@ -24,14 +34,14 @@ export class SaRepository {
         sortDirection: queryParams.sortDirection ?? 'desc',
         searchEmailTerm: queryParams.searchEmailTerm ?? null,
         searchLoginTerm: queryParams.searchLoginTerm ?? null,
-        banStatus: queryParams.banStatus, // No need to use a default value here since it's handled later.
+        banStatus: queryParams.banStatus ?? 'all',
       };
 
       const skipCount = (query.pageNumber - 1) * query.pageSize;
       const filter: any = {};
 
-      if (query.banStatus !== undefined) {
-        filter['banInfo.isBanned'] = query.banStatus;
+      if (query.banStatus !== 'all') {
+        filter['banInfo.isBanned'] = query.banStatus === 'banned';
       }
 
       if (query.searchLoginTerm || query.searchEmailTerm) {
@@ -186,14 +196,31 @@ export class SaRepository {
     });
   }
 
-  async unBanUser(id: string, banStatus: boolean, banReason: string) {
+  async banUser(id: string, banStatus: boolean, banReason: string) {
     try {
       const result = await this.userModel.findByIdAndUpdate(
         { _id: id },
         {
           'banInfo.isBanned': banStatus,
-          'banInfo.banDate': new Date().toString(),
+          'banInfo.banDate': new Date().toISOString(),
           'banInfo.banReason': banReason,
+        },
+      );
+      return result;
+    } catch (e) {
+      console.error('An error occurred while unbanning user:', e);
+      return false;
+    }
+  }
+
+  async unBanUser(id: string, banStatus: boolean) {
+    try {
+      const result = await this.userModel.findByIdAndUpdate(
+        { _id: id },
+        {
+          'banInfo.isBanned': banStatus,
+          'banInfo.banDate': null,
+          'banInfo.banReason': null,
         },
       );
       return result;

@@ -70,11 +70,10 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   async login(
-    @Request() req,
     @Res({ passthrough: true }) res: Response,
-    @UserIdFromGuard() userId,
-    @Ip() ip,
-    @Headers() headers,
+    @UserIdFromGuard() userId: any,
+    @Ip() ip: any,
+    @Headers() headers: any,
   ) {
     const userAgent = headers['user-agent'] || 'unknown';
 
@@ -162,7 +161,7 @@ export class AuthController {
 
   @HttpCode(204)
   @UseGuards(ThrottlerGuard)
-  @Post('registration') /// work
+  @Post('registration')
   async registration(@Body() registrationDto: RegistrationDto) {
     return await this.authService.registration(registrationDto);
   }

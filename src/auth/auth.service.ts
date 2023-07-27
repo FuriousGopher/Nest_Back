@@ -154,8 +154,8 @@ export class AuthService {
     const findUserByLoginOrEmail = await this.saRepository.findByLoginOrEmail(
       loginOrEmail,
     );
-
     if (!findUserByLoginOrEmail) return false;
+    if (findUserByLoginOrEmail!.banInfo.isBanned === true) return false;
     if (!findUserByLoginOrEmail.emailConfirmation.isConfirmed) return false;
 
     const passwordHash = await bcrypt.hash(

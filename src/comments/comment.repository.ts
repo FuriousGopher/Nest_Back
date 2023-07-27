@@ -3,11 +3,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Comment, CommentDocument } from '../db/schemas/comments.schema';
 import { Model } from 'mongoose';
 import { CommentsQueryParamsDto } from '../posts/dto/comments-query-params.dto';
+import { SaRepository } from '../sa/sa.repository';
 
 @Injectable()
 export class CommentRepository {
   constructor(
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
+    protected saRepository: SaRepository,
   ) {}
 
   async save(newComment: CommentDocument) {
@@ -21,6 +23,13 @@ export class CommentRepository {
     if (userId) {
       status = await this.findUserLikeStatus(id, userId);
     }
+
+    const checkBanStatus = await this.saRepository.checkUserBanStatus(userId);
+
+    if (checkBanStatus) {
+      return false;
+    }
+
     return {
       id: result._id.toString(),
       content: result.content,

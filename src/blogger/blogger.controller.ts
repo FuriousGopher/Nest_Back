@@ -1,14 +1,14 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Param,
-  UseGuards,
-  Query,
-  HttpCode,
-  Put,
+  Controller,
   Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { BloggerService } from './blogger.service';
 import { JwtBearerGuard } from '../auth/guards/jwt-bearer.guard';
@@ -23,6 +23,7 @@ import { createPostByBlogIdDto } from '../blogs/dto/create-post-byBlogId.dto';
 import { UpdateBlogDto } from '../blogs/dto/update-blog.dto';
 import { UpdatePostDto } from '../posts/dto/update-post.dto';
 import { PostsService } from '../posts/posts.service';
+import { UpdatePostByBloggerDto } from './dto/update-post-by-blogger.dto';
 
 @UseGuards(JwtBearerGuard)
 @Controller('blogger/blogs')
@@ -129,6 +130,16 @@ export class BloggerController {
     @Body() updateBlogDto: UpdateBlogDto,
     @UserIdFromHeaders() userId: string,
   ) {
+    const findBlog = await this.blogsService.findOne(id);
+
+    if (!findBlog) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Blog with this id not found',
+        'id',
+      );
+    }
+
     const checkOwner = await this.blogsService.checkOwner(userId, id);
 
     if (!checkOwner) {
@@ -139,15 +150,7 @@ export class BloggerController {
       );
     }
 
-    const updatedResult = await this.blogsService.updateOne(id, updateBlogDto);
-    if (!updatedResult) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'Blog with this id not found',
-        'id',
-      );
-    }
-    return updatedResult;
+    return await this.blogsService.updateOne(id, updateBlogDto);
   }
 
   @HttpCode(204)
@@ -155,9 +158,19 @@ export class BloggerController {
   async updatePost(
     @Param('blogId') blogId: string,
     @Param('postId') postId: string,
-    @Body() updatePostDto: UpdatePostDto,
+    @Body() updatePostDto: UpdatePostByBloggerDto,
     @UserIdFromHeaders() userId: string,
   ) {
+    const findPost = await this.postsService.findOne(postId);
+
+    if (!findPost) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Blog with this id not found',
+        'id',
+      );
+    }
+
     const checkOwner = await this.blogsService.checkOwner(userId, blogId);
 
     if (!checkOwner) {
@@ -168,15 +181,7 @@ export class BloggerController {
       );
     }
 
-    const result = await this.postsService.updateOne(postId, updatePostDto);
-    if (!result) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        `Post with this ${postId} not found`,
-        'id',
-      );
-    }
-    return result;
+    return await this.postsService.updateOne(postId, updatePostDto);
   }
 
   @HttpCode(204)
@@ -185,6 +190,16 @@ export class BloggerController {
     @Param('id') id: string,
     @UserIdFromHeaders() userId: string,
   ) {
+    const findBlog = await this.blogsService.findOne(id);
+
+    if (!findBlog) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Blog with this id not found',
+        'id',
+      );
+    }
+
     const checkOwner = await this.blogsService.checkOwner(userId, id);
 
     if (!checkOwner) {
@@ -195,16 +210,7 @@ export class BloggerController {
       );
     }
 
-    const result = this.blogsService.remove(id);
-
-    if (!result) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        `Comment with ${id} not found`,
-        'id',
-      );
-    }
-    return result;
+    return this.blogsService.remove(id);
   }
 
   @HttpCode(204)
@@ -214,6 +220,16 @@ export class BloggerController {
     @Param('postId') postId: string,
     @UserIdFromHeaders() userId: string,
   ) {
+    const findPost = await this.postsService.findOne(postId);
+
+    if (!findPost) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Blog with this id not found',
+        'id',
+      );
+    }
+
     const checkOwner = await this.blogsService.checkOwner(userId, blogId);
 
     if (!checkOwner) {
@@ -224,14 +240,6 @@ export class BloggerController {
       );
     }
 
-    const result = await this.postsService.remove(postId);
-    if (!result) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        `Post with this ${postId} not found`,
-        'id',
-      );
-    }
-    return result;
+    return await this.postsService.remove(postId);
   }
 }

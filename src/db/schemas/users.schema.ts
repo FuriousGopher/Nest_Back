@@ -56,5 +56,7 @@ UserSchema.pre<User>('save', function (next) {
   this.accountData.createdAt = new Date().toString();
   this.accountData.isMembership = false;
   this.banInfo.isBanned = false;
+  this.banInfo.banDate = null;
+  this.banInfo.banReason = null;
   next();
 });

@@ -71,7 +71,7 @@ export class BlogsService {
     );
   }
 
-  findOne(id: string) {
+  findById(id: string) {
     return this.blogsRepository.findById(id);
   }
 
@@ -81,6 +81,10 @@ export class BlogsService {
 
   remove(id: string) {
     return this.blogsRepository.remove(id);
+  }
+
+  async findOne(blogId: string) {
+    return this.blogsRepository.findOne(blogId);
   }
 
   async checkOwner(userId: string, blogId: string) {

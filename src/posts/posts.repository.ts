@@ -4,10 +4,14 @@ import { Post, PostDocument } from '../db/schemas/posts.schema';
 import { Model } from 'mongoose';
 import { PostsQueryParamsDto } from './dto/posts-query-params.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { SaRepository } from '../sa/sa.repository';
 
 @Injectable()
 export class PostsRepository {
-  constructor(@InjectModel(Post.name) private postModel: Model<PostDocument>) {}
+  constructor(
+    @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    protected saRepository: SaRepository,
+  ) {}
 
   async findAllPosts(queryParams: PostsQueryParamsDto, userId: string) {
     try {
@@ -64,6 +68,24 @@ export class PostsRepository {
           ? post.extendedLikesInfo.dislikesCount
           : 0;
 
+        const checkBanStatus = userId
+          ? await this.saRepository.checkUserBanStatus(userId)
+          : false;
+
+        const bannedUserIds = new Set<string>();
+        if (userId && checkBanStatus) {
+          const bannedUserLikes = likesArray.filter((like) => {
+            if (like.likeStatus === 'Like' && like.userId !== userId) {
+              bannedUserIds.add(like.userId);
+              return false;
+            }
+            return true;
+          });
+
+          // Update likesArray with filtered likes (excluding banned users' likes)
+          likesArray.splice(0, likesArray.length, ...bannedUserLikes);
+        }
+
         return {
           id: post._id.toString(),
           title: post.title,
@@ -77,13 +99,14 @@ export class PostsRepository {
             dislikesCount: dislikeCountCheck,
             myStatus: status || 'None',
             newestLikes: likesArray
-              .filter((post) => post.likeStatus === 'Like')
+              .filter((like) => !bannedUserIds.has(like.userId))
+              .filter((like) => like.likeStatus === 'Like')
               .sort((a, b) => -a.addedAt.localeCompare(b.addedAt))
-              .map((post) => {
+              .map((like) => {
                 return {
-                  addedAt: post.addedAt.toString(),
-                  userId: post.userId,
-                  login: post.userLogin,
+                  addedAt: like.addedAt.toString(),
+                  userId: like.userId,
+                  login: like.userLogin,
                 };
               })
               .splice(0, 3),
@@ -184,7 +207,7 @@ export class PostsRepository {
       .exec();
   }
 
-  async findUserLikeStatus(id: string, userId) {
+  async findUserLikeStatus(id: string, userId: string) {
     const result = await this.postModel
       .findOne({
         _id: id,
@@ -219,7 +242,7 @@ export class PostsRepository {
       .exec();
   }
 
-  async findOneWitchMapping(id: string, userId: string) {
+  async findOneWithMapping(id: string, userId: string) {
     try {
       const post = await this.postModel.findById(id);
       if (!post) {

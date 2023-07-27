@@ -78,7 +78,15 @@ export class SaService {
       return false;
     }
 
-    return await this.saRepository.unBanUser(id, banStatus, banReason);
+    if (banStatus) {
+      await this.saRepository.banUser(id, banStatus, banReason);
+      return true;
+    }
+
+    if (!banStatus) {
+      await this.saRepository.unBanUser(id, banStatus);
+      return true;
+    }
   }
 
   async bindBlog(id: string, userId: string) {

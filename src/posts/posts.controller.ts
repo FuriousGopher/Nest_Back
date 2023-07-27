@@ -17,7 +17,6 @@ import { PostsQueryParamsDto } from './dto/posts-query-params.dto';
 import { CreateCommentDto } from '../comments/dto/create-comment.dto';
 import { exceptionHandler } from '../exceptions/exception.handler';
 import { ResultCode } from '../enums/result-code.enum';
-import { UserIdFromGuard } from '../decorators/user-id-from-guard.decorator';
 import { CommentsQueryParamsDto } from './dto/comments-query-params.dto';
 import { UserIdFromHeaders } from '../decorators/user-id-from-headers.decorator';
 import { JwtBearerGuard } from '../auth/guards/jwt-bearer.guard';
@@ -55,8 +54,8 @@ export class PostsController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string, @UserIdFromHeaders() userId) {
-    const resultFindOne = await this.postsService.findOne(id, userId);
+  async findOne(@Param('id') id: string, @UserIdFromHeaders() userId: any) {
+    const resultFindOne = await this.postsService.findOneMapped(id, userId);
     if (!resultFindOne) {
       return exceptionHandler(
         ResultCode.NotFound,
@@ -102,13 +101,16 @@ export class PostsController {
   async createComment(
     @Param('id') id: string,
     @Body() createCommentDto: CreateCommentDto,
-    @UserIdFromGuard() userId,
+    @UserIdFromHeaders() userId: any,
   ) {
+    console.log('userId', userId);
+    console.log('id', id);
     const resultCreated = await this.postsService.createComment(
       id,
       createCommentDto,
       userId,
     );
+    console.log('resultCreated', resultCreated);
     if (!resultCreated) {
       return exceptionHandler(
         ResultCode.NotFound,
@@ -146,7 +148,7 @@ export class PostsController {
   async makeLikeStatus(
     @Param('id') id: string,
     @Body() likeStatusDto: LikesDto,
-    @UserIdFromGuard() userId,
+    @UserIdFromHeaders() userId,
   ) {
     const result = await this.postsService.putNewLikeStatus(
       id,

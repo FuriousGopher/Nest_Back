@@ -56,7 +56,7 @@ export class SaController {
     const deleted = await this.saService.deleteUser(id);
     if (!deleted) {
       return exceptionHandler(
-        ResultCode.BadRequest,
+        ResultCode.NotFound,
         `User with id ${id} not found`,
         'id',
       );

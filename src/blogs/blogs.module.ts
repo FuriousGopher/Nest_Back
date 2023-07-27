@@ -12,7 +12,7 @@ import { JwtRefreshTokenStrategy } from '../auth/strategies/jwt-refresh.strategy
 import { AuthModule } from '../auth/auth.module';
 import { CqrsModule } from '@nestjs/cqrs';
 import { JwtModule } from '@nestjs/jwt';
-import { PostsRepository } from '../posts/posts.repository';
+import { PostsModule } from '../posts/posts.module';
 
 const strategies = [
   BasicStrategy,
@@ -27,9 +27,10 @@ const strategies = [
     AuthModule,
     CqrsModule,
     JwtModule,
+    PostsModule,
   ],
   controllers: [BlogsController],
-  providers: [BlogsService, BlogsRepository, ...strategies, PostsRepository],
+  providers: [BlogsService, BlogsRepository, ...strategies],
   exports: [BlogsRepository, BlogsService],
 })
 export class BlogsModule {}

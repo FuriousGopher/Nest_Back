@@ -12,12 +12,13 @@ import { CommentRepository } from '../comments/comment.repository';
 import { CommentsQueryParamsDto } from './dto/comments-query-params.dto';
 import { LikesDto } from './dto/like-status.dto';
 import { Post, PostDocument } from '../db/schemas/posts.schema';
+import { PostsQueryParamsDto } from './dto/posts-query-params.dto';
 
 @Injectable()
 export class PostsService {
   constructor(
     protected postsRepository: PostsRepository,
-    protected usersRepository: SaRepository,
+    protected saRepository: SaRepository,
     protected commentRepository: CommentRepository,
     protected blogsRepository: BlogsRepository,
     @InjectModel(Comment.name) private commentModel: Model<Comment>,
@@ -65,15 +66,15 @@ export class PostsService {
     }
   }
 
-  async findAll(queryParams, userId: string) {
+  async findAll(queryParams: PostsQueryParamsDto, userId: string) {
     return await this.postsRepository.findAllPosts(queryParams, userId);
   }
 
-  findOne(id: string, userId: string) {
-    return this.postsRepository.findOneWitchMapping(id, userId);
+  findOneMapped(id: string, userId: string) {
+    return this.postsRepository.findOneWithMapping(id, userId);
   }
 
-  updateOne(id: string, updatePostDto: UpdatePostDto) {
+  updateOne(id: string, updatePostDto) {
     return this.postsRepository.updateOne(id, updatePostDto);
   }
 
@@ -87,7 +88,7 @@ export class PostsService {
     userId: string,
   ) {
     const findPost = await this.postsRepository.findOne(id);
-    const user = await this.usersRepository.findOne(userId);
+    const user = await this.saRepository.findOne(userId);
     if (!user) return false;
 
     if (!findPost) return false;
@@ -150,7 +151,7 @@ export class PostsService {
     const likeStatus = likeStatusDto.likeStatus;
     const findPost = await this.postsRepository.findOne(id);
     if (!findPost) return false;
-    const user = await this.usersRepository.findOne(userId);
+    const user = await this.saRepository.findOne(userId);
     if (!user) return false;
 
     const userLogin = user.accountData.login;
@@ -228,5 +229,9 @@ export class PostsService {
     await this.postsRepository.updateLikesCount(id, likesCount, dislikesCount);
 
     return this.postsRepository.updateLikesStatus(id, userId, likeStatus);
+  }
+
+  async findOne(id: string) {
+    return await this.postsRepository.findOne(id);
   }
 }

@@ -91,7 +91,7 @@ export class BlogsController {
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    const resultFindOne = await this.blogsService.findOne(id);
+    const resultFindOne = await this.blogsService.findById(id);
     if (!resultFindOne) {
       return exceptionHandler(
         ResultCode.NotFound,
