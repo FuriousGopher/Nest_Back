@@ -176,7 +176,7 @@ export class BloggerController {
     if (!checkOwner) {
       return exceptionHandler(
         ResultCode.Forbidden,
-        `Blog with ${blogId} not yours`,
+        `Blog with ${blogId} not yours `,
         'id',
       );
     }
