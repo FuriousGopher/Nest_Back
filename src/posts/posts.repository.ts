@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Post, PostDocument } from '../db/schemas/posts.schema';
 import { Model } from 'mongoose';
@@ -72,6 +72,8 @@ export class PostsRepository {
           ? await this.saRepository.checkUserBanStatus(userId)
           : false;
 
+        console.log('checkBanStatus', checkBanStatus);
+
         const bannedUserIds = new Set<string>();
         if (userId && checkBanStatus) {
           const bannedUserLikes = likesArray.filter((like) => {
@@ -125,7 +127,7 @@ export class PostsRepository {
 
   async updateOne(id: string, updatePostDto: UpdatePostDto) {
     try {
-      const updatedPost = await this.postModel
+      return await this.postModel
         .findByIdAndUpdate(
           { _id: id },
           {
@@ -134,12 +136,6 @@ export class PostsRepository {
           { new: true },
         )
         .exec();
-
-      if (!updatedPost) {
-        return false;
-      }
-
-      return true;
     } catch (e) {
       return false;
     }
@@ -149,7 +145,7 @@ export class PostsRepository {
     try {
       const deletedPost = await this.postModel.findByIdAndDelete(id).exec();
       if (!deletedPost) {
-        throw new NotFoundException('Post not found');
+        return false;
       }
       return true;
     } catch (e) {
@@ -225,7 +221,7 @@ export class PostsRepository {
     return result.extendedLikesInfo.users[0].likeStatus;
   }
 
-  updateLikesStatus(id: string, userId, likeStatus: string) {
+  updateLikesStatus(id: string, userId: string, likeStatus: string) {
     return this.postModel
       .findOneAndUpdate(
         {
