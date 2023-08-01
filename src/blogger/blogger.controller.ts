@@ -97,6 +97,14 @@ export class BloggerController {
     @Param('id') id: string,
     @UserIdFromHeaders() userId: string,
   ) {
+    const findBlog = await this.blogsService.findOne(id);
+    if (!findBlog) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Blog with this id not found',
+        'id',
+      );
+    }
     const checkOwner = await this.blogsService.checkOwner(userId, id);
 
     if (!checkOwner) {
@@ -107,19 +115,7 @@ export class BloggerController {
       );
     }
 
-    const createResult = await this.blogsService.createPostByBlogId(
-      createPostDto,
-      id,
-    );
-
-    if (!createResult) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'Blog with this id not found',
-        'id',
-      );
-    }
-    return createResult;
+    return await this.blogsService.createPostByBlogId(createPostDto, id);
   }
 
   @HttpCode(204)

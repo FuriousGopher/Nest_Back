@@ -9,6 +9,14 @@ import { UsersResponseDto } from './dto/usersResponse.dto';
 export class SaRepository {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
+  async findBannedUsersFromArrayOfIds(ids: Types.ObjectId[]) {
+    const users = await this.userModel.find({
+      'banInfo.isBanned': true,
+      _id: { $in: ids },
+    });
+    return users.map((user) => user._id.toString());
+  }
+
   async saveUser(newUser: UserDocument) {
     return await newUser.save();
   }

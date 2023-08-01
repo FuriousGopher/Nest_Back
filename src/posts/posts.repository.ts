@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Post, PostDocument } from '../db/schemas/posts.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { PostsQueryParamsDto } from './dto/posts-query-params.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { SaRepository } from '../sa/sa.repository';
@@ -52,40 +52,41 @@ export class PostsRepository {
   async mapGetAllPosts(array: PostDocument[], userId?: string) {
     return Promise.all(
       array.map(async (post) => {
-        let status;
+        let status: string | undefined;
+
+        const usersWithReaction = post.extendedLikesInfo.users;
 
         if (userId) {
-          status = await this.findUserLikeStatus(post._id.toString(), userId);
+          status = usersWithReaction.find(
+            (u) => u.userId === userId,
+          )?.likeStatus;
         }
-        const likesArray =
-          post.extendedLikesInfo && post.extendedLikesInfo.users
-            ? post.extendedLikesInfo.users
-            : [];
-        const likesCountCheck = post.extendedLikesInfo
-          ? post.extendedLikesInfo.likesCount
-          : 0;
-        const dislikeCountCheck = post.extendedLikesInfo
-          ? post.extendedLikesInfo.dislikesCount
-          : 0;
 
-        const checkBanStatus = userId
-          ? await this.saRepository.checkUserBanStatus(userId)
-          : false;
+        const usersIdsWithReaction = usersWithReaction.map(
+          (u) => new Types.ObjectId(u.userId),
+        );
 
-        console.log('checkBanStatus', checkBanStatus);
+        const bannedUsers =
+          await this.saRepository.findBannedUsersFromArrayOfIds(
+            usersIdsWithReaction,
+          );
 
-        const bannedUserIds = new Set<string>();
-        if (userId && checkBanStatus) {
-          const bannedUserLikes = likesArray.filter((like) => {
-            if (like.likeStatus === 'Like' && like.userId !== userId) {
-              bannedUserIds.add(like.userId);
-              return false;
-            }
-            return true;
-          });
+        const allowedUsers = usersWithReaction.filter(
+          (u) => !bannedUsers.includes(u.userId),
+        );
 
-          likesArray.splice(0, likesArray.length, ...bannedUserLikes);
-        }
+        const likesArray = allowedUsers.filter((u) => u.likeStatus === 'Like');
+
+        const newestLikes = likesArray
+          .sort((a, b) => -a.addedAt.localeCompare(b.addedAt))
+          .map((like) => ({
+            addedAt: like.addedAt.toString(),
+            userId: like.userId,
+            login: like.userLogin,
+          }))
+          .splice(0, 3);
+        const likesCountCheck = likesArray.length;
+        const dislikeCountCheck = allowedUsers.length - likesCountCheck;
 
         return {
           id: post._id.toString(),
@@ -99,18 +100,7 @@ export class PostsRepository {
             likesCount: likesCountCheck,
             dislikesCount: dislikeCountCheck,
             myStatus: status || 'None',
-            newestLikes: likesArray
-              .filter((like) => !bannedUserIds.has(like.userId))
-              .filter((like) => like.likeStatus === 'Like')
-              .sort((a, b) => -a.addedAt.localeCompare(b.addedAt))
-              .map((like) => {
-                return {
-                  addedAt: like.addedAt.toString(),
-                  userId: like.userId,
-                  login: like.userLogin,
-                };
-              })
-              .splice(0, 3),
+            newestLikes,
           },
         };
       }),
@@ -188,7 +178,7 @@ export class PostsRepository {
     return result;
   }
 
-  updateLikesCount(id: string, likesCount: any, dislikesCount: any) {
+  async updateLikesCount(id: string, likesCount: any, dislikesCount: any) {
     return this.postModel
       .findByIdAndUpdate(
         { _id: id },
@@ -205,8 +195,7 @@ export class PostsRepository {
   async findUserLikeStatus(id: string, userId: string) {
     const result = await this.postModel
       .findOne({
-        _id: id,
-        'extendedLikesInfo.users.userId': userId,
+        _id: new Types.ObjectId(id),
       })
       .exec();
 
@@ -215,13 +204,14 @@ export class PostsRepository {
       !result.extendedLikesInfo ||
       !result.extendedLikesInfo.users
     ) {
+      console.log('if none');
       return 'None';
     }
 
     return result.extendedLikesInfo.users[0].likeStatus;
   }
 
-  updateLikesStatus(id: string, userId: string, likeStatus: string) {
+  async updateLikesStatus(id: string, userId: string, likeStatus: string) {
     return this.postModel
       .findOneAndUpdate(
         {

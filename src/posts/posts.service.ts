@@ -88,10 +88,10 @@ export class PostsService {
     userId: string,
   ) {
     const findPost = await this.postsRepository.findOne(id);
+    if (!findPost) return false;
+
     const user = await this.saRepository.findOne(userId);
     if (!user) return false;
-
-    if (!findPost) return false;
 
     const newComment = new this.commentModel({
       content: createCommentDto.content,
@@ -104,12 +104,7 @@ export class PostsService {
         likesCount: 0,
         dislikesCount: 0,
         myStatus: 'None',
-        users: [
-          {
-            userId: userId,
-            likeStatus: 'None',
-          },
-        ],
+        users: [],
       },
     });
 

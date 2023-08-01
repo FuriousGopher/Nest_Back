@@ -23,7 +23,6 @@ export class CommentsController {
   @Get(':id')
   async findOne(@Param('id') id: string, @UserIdFromHeaders() userId: string) {
     const result = await this.commentsService.findOne(id, userId);
-    console.log('result', result);
     if (!result) {
       return exceptionHandler(
         ResultCode.NotFound,

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Comment, CommentDocument } from '../db/schemas/comments.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CommentsQueryParamsDto } from '../posts/dto/comments-query-params.dto';
 import { SaRepository } from '../sa/sa.repository';
 
@@ -17,22 +17,54 @@ export class CommentRepository {
   }
 
   async findById(id: string, userId: string) {
-    const result = await this.commentModel.findOne({ _id: id }).exec();
+    const result: Comment | null = await this.commentModel
+      .findOne({ _id: id })
+      .lean();
+
     if (!result) return false;
-    let status;
-    if (userId) {
-      status = await this.findUserLikeStatus(id, userId);
-    }
 
-    const checkBanStatus = await this.saRepository.checkUserBanStatus(userId);
+    const checkBanStatus = await this.saRepository.checkUserBanStatus(
+      result.commentatorInfo.userId,
+    );
 
-    console.log('checkBanStatus', checkBanStatus);
     if (!checkBanStatus) {
       return false;
     }
+    let status;
+
+    const usersWithReactionForComment = result.likesInfo.users;
+
+    if (userId) {
+      status = usersWithReactionForComment.find(
+        (u) => u.userId === userId,
+      )?.likeStatus;
+    }
+
+    const usersIdsWithReactionForComment = usersWithReactionForComment.map(
+      (u) => new Types.ObjectId(u.userId),
+    );
+
+    const bannedUsers = await this.saRepository.findBannedUsersFromArrayOfIds(
+      usersIdsWithReactionForComment,
+    );
+
+    const allowedUsers = usersWithReactionForComment.filter(
+      (u) => !bannedUsers.includes(u.userId),
+    );
+
+    console.log(allowedUsers);
+
+    const likesCountCheck = allowedUsers.filter(
+      (u) => u.likeStatus === 'Like',
+    ).length;
+    const dislikeCountCheck = allowedUsers.filter(
+      (u) => u.likeStatus === 'Dislike',
+    ).length;
+
+    console.log(likesCountCheck, dislikeCountCheck);
 
     return {
-      id: result._id.toString(),
+      id: result.id,
       content: result.content,
       commentatorInfo: {
         userId: result.commentatorInfo.userId,
@@ -40,8 +72,8 @@ export class CommentRepository {
       },
       createdAt: result.createdAt,
       likesInfo: {
-        likesCount: result.likesInfo.likesCount,
-        dislikesCount: result.likesInfo.dislikesCount,
+        likesCount: +likesCountCheck,
+        dislikesCount: +dislikeCountCheck,
         myStatus: status || 'None',
       },
     };
