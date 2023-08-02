@@ -224,7 +224,7 @@ export class SaRepository {
 
   async unBanUser(id: string, banStatus: boolean) {
     try {
-      const result = await this.userModel.findByIdAndUpdate(
+      return await this.userModel.findByIdAndUpdate(
         { _id: id },
         {
           'banInfo.isBanned': banStatus,
@@ -232,7 +232,6 @@ export class SaRepository {
           'banInfo.banReason': null,
         },
       );
-      return result;
     } catch (e) {
       console.error('An error occurred while unbanning user:', e);
       return false;

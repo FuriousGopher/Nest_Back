@@ -18,7 +18,7 @@ export class CreateBlogDto {
   @Matches(
     /^https:\/\/([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9_-]+(\/[a-zA-Z0-9_-]+)*\/?$/,
     {
-      message: 'Name should content only letters and numbers',
+      message: 'websiteUrl should content only letters and numbers',
     },
   )
   @MaxLength(100)

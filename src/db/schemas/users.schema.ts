@@ -13,7 +13,7 @@ export class User {
       login: { type: String },
       email: { type: String },
       passwordHash: { type: String },
-      createdAt: { type: Date, default: new Date() },
+      createdAt: { type: Date },
       isMembership: { type: Boolean },
     }),
   )
@@ -40,7 +40,7 @@ export class User {
     raw({
       isBanned: { type: Boolean },
       banDate: { type: String || null },
-      banReason: { type: String || null },
+      banReason: { type: String },
     }),
   )
   banInfo: {
@@ -48,15 +48,13 @@ export class User {
     banDate: string | null;
     banReason: string | null;
   };
+  @Prop()
+  banForBlogsInfo: {
+    isBanned: boolean;
+    banDate: string | null;
+    blogIds: any[];
+    banReason: string | null;
+  }[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
-
-UserSchema.pre<User>('save', function (next) {
-  this.accountData.createdAt = new Date().toISOString();
-  this.accountData.isMembership = false;
-  this.banInfo.isBanned = false;
-  this.banInfo.banDate = null;
-  this.banInfo.banReason = null;
-  next();
-});

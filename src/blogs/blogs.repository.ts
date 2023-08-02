@@ -9,12 +9,16 @@ import { Post, PostDocument } from '../db/schemas/posts.schema';
 import { PostsRepository } from '../posts/posts.repository';
 import { PostsQueryParamsDto } from 'src/posts/dto/posts-query-params.dto';
 import { CreateBlogDto } from './dto/create-blog.dto';
+import { BannedUsersQueryParamsDto } from '../blogger/dto/banned-users-query-params.dto';
+import { User, UserDocument } from '../db/schemas/users.schema';
+import { BanUserDto } from '../sa/dto/ban-user.dto';
 
 @Injectable()
 export class BlogsRepository {
   constructor(
     @InjectModel(Blog.name) private blogModel: Model<BlogDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     @Inject(PostsRepository)
     protected postsRepository: PostsRepository,
   ) {}
@@ -294,6 +298,10 @@ export class BlogsRepository {
         userId: blog.blogOwnerInfo.userId,
         userLogin: blog.blogOwnerInfo.userLogin,
       },
+      banInfo: {
+        isBanned: blog.banInfo.isBanned,
+        banDate: blog.banInfo.banDate,
+      },
     }));
 
     return {
@@ -305,7 +313,20 @@ export class BlogsRepository {
     };
   }
 
-  async findAllOwenBlogs(queryParams: BlogsQueryParamsDto, userId: string) {
+  async findAllOwnBlogs(userId: string) {
+    const result = await this.blogModel
+      .find({ 'blogOwnerInfo.userId': userId })
+      .exec();
+    if (!result) {
+      return false;
+    }
+    return result;
+  }
+
+  async findAllOwenBlogsPagination(
+    queryParams: BlogsQueryParamsDto,
+    userId: string,
+  ) {
     try {
       const {
         searchNameTerm = null,
@@ -364,5 +385,145 @@ export class BlogsRepository {
       console.error('An error occurred while saving the blog', e);
       return false;
     }
+  }
+
+  async unBanBlog(id: string, banStatus: boolean) {
+    return this.blogModel.findByIdAndUpdate(
+      { _id: id },
+      {
+        'banInfo.isBanned': banStatus,
+        'banInfo.banDate': null,
+      },
+    );
+  }
+
+  async banBlog(id: string, banStatus: boolean) {
+    return this.blogModel.findByIdAndUpdate(
+      { _id: id },
+      {
+        'banInfo.isBanned': banStatus,
+        'banInfo.banDate': new Date().toISOString(),
+      },
+    );
+  }
+
+  async findAllBannedUsersForBlog(
+    blogId: string,
+    queryParams: BannedUsersQueryParamsDto,
+  ) {
+    const {
+      searchLoginTerm = null,
+      sortBy = 'createdAt',
+      sortDirection = 'desc',
+      pageNumber = 1,
+      pageSize = 10,
+    } = queryParams;
+
+    const skipCount = (pageNumber - 1) * pageSize;
+    const filter: any = {
+      banForBlogsInfo: {
+        $elemMatch: { blogIds: blogId, isBanned: true },
+      },
+    };
+
+    if (searchLoginTerm) {
+      filter.$or = [
+        {
+          'accountData.login': {
+            $regex: searchLoginTerm,
+            $options: 'i',
+          },
+        },
+      ];
+    }
+
+    const totalCount = await this.userModel.countDocuments(filter).exec();
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    const users = await this.userModel
+      .find(filter)
+      .sort({ [sortBy]: sortDirection === 'desc' ? -1 : 1 })
+      .skip(skipCount)
+      .limit(pageSize)
+      .exec();
+
+    const bannedUsersViewModels = users.map((user) => ({
+      id: user._id.toString(),
+      login: user.accountData.login,
+      banInfo: {
+        isBanned: user.banForBlogsInfo.map((info) => info.isBanned),
+        banDate: user.banForBlogsInfo.map((info) => info.banDate),
+        banReason: user.banForBlogsInfo.map((info) => info.banReason),
+      },
+    }));
+
+    return {
+      pagesCount: totalPages,
+      page: +pageNumber,
+      pageSize: +pageSize,
+      totalCount: totalCount,
+      items: bannedUsersViewModels,
+    };
+  }
+
+  async banUserForBlogs(
+    banUserDto: BanUserDto,
+    userId: string,
+    bloggerId: string,
+  ) {
+    const blogs = await this.blogModel
+      .find({ 'blogOwnerInfo.userId': bloggerId })
+      .exec();
+
+    const blogIds = blogs.map((blog) => blog._id.toString());
+
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) return false;
+
+    for (const blogId of blogIds) {
+      user.banForBlogsInfo.push({
+        isBanned: banUserDto.isBanned,
+        banReason: banUserDto.banReason,
+        banDate: new Date().toISOString(),
+        blogIds: [blogId],
+      });
+    }
+
+    await user.save();
+
+    return true;
+  }
+
+  async unBanUserForBlogs(
+    banUserDto: BanUserDto,
+    userId: string,
+    bloggerId: string,
+  ) {
+    const blogs = await this.blogModel
+      .find({ 'blogOwnerInfo.userId': bloggerId })
+      .exec();
+
+    const blogIds = blogs.map((blog) => blog.id);
+
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) return false;
+
+    user.banForBlogsInfo = user.banForBlogsInfo.filter(
+      (banInfo) => !blogIds.includes(banInfo.blogIds[0]),
+    );
+
+    // Add new data for unban
+    for (const blogId of blogIds) {
+      user.banForBlogsInfo.push({
+        isBanned: banUserDto.isBanned,
+        banReason: null,
+        banDate: null,
+        blogIds: [blogId],
+      });
+    }
+
+    await user.save();
+
+    return true;
   }
 }

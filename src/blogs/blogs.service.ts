@@ -5,6 +5,7 @@ import { BlogsRepository } from './blogs.repository';
 import { PostsQueryParamsDto } from 'src/posts/dto/posts-query-params.dto';
 import { BlogsQueryParamsDto } from './dto/blogs-query-params.dto';
 import { createPostByBlogIdDto } from './dto/create-post-byBlogId.dto';
+import { BannedUsersQueryParamsDto } from '../blogger/dto/banned-users-query-params.dto';
 
 @Injectable()
 export class BlogsService {
@@ -93,5 +94,19 @@ export class BlogsService {
       return false;
     }
     return findBlog.blogOwnerInfo.userId === userId;
+  }
+
+  async findAllBannedUsersForBlog(
+    id: string,
+    queryParams: BannedUsersQueryParamsDto,
+  ) {
+    const findBlog = await this.blogsRepository.findOne(id);
+    if (!findBlog) {
+      return false;
+    }
+    return this.blogsRepository.findAllBannedUsersForBlog(
+      findBlog._id.toString(),
+      queryParams,
+    );
   }
 }

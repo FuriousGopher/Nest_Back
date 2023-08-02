@@ -23,9 +23,11 @@ import { createPostByBlogIdDto } from '../blogs/dto/create-post-byBlogId.dto';
 import { UpdateBlogDto } from '../blogs/dto/update-blog.dto';
 import { PostsService } from '../posts/posts.service';
 import { UpdatePostByBloggerDto } from './dto/update-post-by-blogger.dto';
+import { BannedUsersQueryParamsDto } from './dto/banned-users-query-params.dto';
+import { BanUserDto } from '../sa/dto/ban-user.dto';
 
 @UseGuards(JwtBearerGuard)
-@Controller('blogger/blogs')
+@Controller('blogger')
 export class BloggerController {
   constructor(
     private readonly bloggerService: BloggerService,
@@ -33,7 +35,7 @@ export class BloggerController {
     private readonly postsService: PostsService,
   ) {}
 
-  @Get()
+  @Get('blogs')
   async findAll(
     @UserIdFromHeaders() userId: string,
     @Query() queryParams: BlogsQueryParamsDto,
@@ -45,7 +47,7 @@ export class BloggerController {
     return result;
   }
 
-  @Get(':id/posts')
+  @Get('blogs/:id/posts')
   async findAllPosts(
     @Query() queryParams: PostsQueryParamsDto,
     @Param('id') id: string,
@@ -75,7 +77,7 @@ export class BloggerController {
     return getResultAllPosts;
   }
 
-  @Post()
+  @Post('blogs')
   async create(
     @Body() createBlogDto: CreateBlogDto,
     @UserIdFromHeaders() userId: string,
@@ -91,7 +93,7 @@ export class BloggerController {
     return result;
   }
 
-  @Post(':id/posts')
+  @Post('blogs/:id/posts')
   async createPost(
     @Body() createPostDto: createPostByBlogIdDto,
     @Param('id') id: string,
@@ -119,7 +121,7 @@ export class BloggerController {
   }
 
   @HttpCode(204)
-  @Put(':id')
+  @Put('blogs/:id')
   async updateBlog(
     @Param('id') id: string,
     @Body() updateBlogDto: UpdateBlogDto,
@@ -149,7 +151,7 @@ export class BloggerController {
   }
 
   @HttpCode(204)
-  @Put(':blogId/posts/:postId')
+  @Put('blogs/:blogId/posts/:postId')
   async updatePost(
     @Param('blogId') blogId: string,
     @Param('postId') postId: string,
@@ -189,7 +191,7 @@ export class BloggerController {
   }
 
   @HttpCode(204)
-  @Delete(':id')
+  @Delete('blogs/:id')
   async removeBlogById(
     @Param('id') id: string,
     @UserIdFromHeaders() userId: string,
@@ -218,7 +220,7 @@ export class BloggerController {
   }
 
   @HttpCode(204)
-  @Delete(':blogId/posts/:postId')
+  @Delete('blogs/:blogId/posts/:postId')
   async removePostById(
     @Param('blogId') blogId: string,
     @Param('postId') postId: string,
@@ -255,5 +257,57 @@ export class BloggerController {
     }
 
     return await this.postsService.remove(postId);
+  }
+
+  ////Users
+
+  @Get('users/blog/:id')
+  async findAllBannedUsersForBlog(
+    @Param('id') id: string,
+    @Query() queryParams: BannedUsersQueryParamsDto,
+  ) {
+    const result = await this.blogsService.findAllBannedUsersForBlog(
+      id,
+      queryParams,
+    );
+    if (!result) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Blog with this id not found',
+        'id',
+      );
+    }
+    return result;
+  }
+
+  @HttpCode(204)
+  @Put('users/:userId/ban')
+  async changeBanStatusOfUser(
+    @Param('userId') userId: string,
+    @UserIdFromHeaders() bloggerId: string,
+    @Body() banUserDto: BanUserDto,
+  ) {
+    const findUser = await this.bloggerService.findUser(userId);
+    if (!findUser) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'User with this id not found',
+        'id',
+      );
+    }
+
+    const result = await this.bloggerService.changeBanStatusOfUser(
+      bloggerId,
+      banUserDto,
+      userId,
+    );
+    if (!result) {
+      return exceptionHandler(
+        ResultCode.BadRequest,
+        'Something went wrong',
+        'userId',
+      );
+    }
+    return result;
   }
 }

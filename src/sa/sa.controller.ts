@@ -24,6 +24,7 @@ import { BlogsQueryParamsDto } from '../blogs/dto/blogs-query-params.dto';
 export class SaController {
   constructor(protected saService: SaService) {}
 
+  ///Users
   @Get('users')
   async getUsers(@Query() queryParams: UserQueryParamsDto) {
     const result = await this.saService.getAllUsers(queryParams);
@@ -76,6 +77,8 @@ export class SaController {
     return;
   }
 
+  ///Blogs
+
   @HttpCode(204)
   @Put('blogs/:id/bind-with-user/:userId')
   async bindBlog(@Param('id') id: string, @Param('userId') userId: string) {
@@ -101,5 +104,19 @@ export class SaController {
       );
     }
     return result;
+  }
+
+  @HttpCode(204)
+  @Put('blogs/:id/ban')
+  async banBlog(@Param('id') id: string, @Body() banUserDto: BanUserDto) {
+    const result = await this.saService.banBlog(id, banUserDto);
+    if (!result) {
+      return exceptionHandler(
+        ResultCode.BadRequest,
+        `Blog with id ${id} not found`,
+        'blog id',
+      );
+    }
+    return;
   }
 }

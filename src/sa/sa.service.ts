@@ -34,9 +34,16 @@ export class SaService {
           login: createUserDto.login,
           email: createUserDto.email,
           passwordHash: passwordHash,
+          createdAt: new Date().toISOString(),
+          isMembership: true,
         },
         emailConfirmation: {
           isConfirmed: true,
+        },
+        banInfo: {
+          isBanned: false,
+          banDate: null,
+          banReason: null,
         },
       });
 
@@ -109,5 +116,21 @@ export class SaService {
 
   async findAllBlogsForSA(queryParams: BlogsQueryParamsDto) {
     return await this.blogsRepository.findAllBlogsForSA(queryParams);
+  }
+
+  async banBlog(id: string, banUserDto: BanUserDto) {
+    const banStatus = banUserDto.isBanned;
+
+    const checkBlog = await this.blogsRepository.findBlog(id);
+    if (!checkBlog) return false;
+
+    if (banStatus) {
+      return this.blogsRepository.banBlog(id, banStatus);
+    }
+
+    if (!banStatus) {
+      return await this.blogsRepository.unBanBlog(id, banStatus);
+    }
+    return false;
   }
 }

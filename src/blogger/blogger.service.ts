@@ -1,26 +1,24 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CreateBloggerDto } from './dto/create-blogger.dto';
-import { UpdateBloggerDto } from './dto/update-blogger.dto';
 import { BlogsQueryParamsDto } from '../blogs/dto/blogs-query-params.dto';
 import { BlogsRepository } from '../blogs/blogs.repository';
 import { CreateBlogDto } from '../blogs/dto/create-blog.dto';
 import { SaRepository } from '../sa/sa.repository';
 import { InjectModel } from '@nestjs/mongoose';
-import { User, UserDocument } from '../db/schemas/users.schema';
 import { Model } from 'mongoose';
 import { Blog, BlogDocument } from '../db/schemas/blogs.schema';
+import { BanUserDto } from '../sa/dto/ban-user.dto';
 
 @Injectable()
 export class BloggerService {
   constructor(
     @Inject(BlogsRepository)
     protected blogsRepository: BlogsRepository,
-    protected usersRepository: SaRepository,
+    protected saRepository: SaRepository,
 
     @InjectModel(Blog.name) private blogModel: Model<BlogDocument>,
   ) {}
   async create(createBlogDto: CreateBlogDto, userId: string) {
-    const findUser = await this.usersRepository.findOne(userId);
+    const findUser = await this.saRepository.findOne(userId);
     if (!findUser) return false;
 
     const newBlog = new this.blogModel({
@@ -47,6 +45,32 @@ export class BloggerService {
   }
 
   findAll(queryParams: BlogsQueryParamsDto, userId: string) {
-    return this.blogsRepository.findAllOwenBlogs(queryParams, userId);
+    return this.blogsRepository.findAllOwenBlogsPagination(queryParams, userId);
+  }
+
+  async findUser(userId: string) {
+    return await this.saRepository.findOne(userId);
+  }
+
+  async changeBanStatusOfUser(
+    bloggerId: string,
+    banUserDto: BanUserDto,
+    userId: string,
+  ) {
+    if (banUserDto.isBanned) {
+      return await this.blogsRepository.banUserForBlogs(
+        banUserDto,
+        userId,
+        bloggerId,
+      );
+    }
+
+    if (!banUserDto.isBanned) {
+      return await this.blogsRepository.unBanUserForBlogs(
+        banUserDto,
+        userId,
+        bloggerId,
+      );
+    }
   }
 }
