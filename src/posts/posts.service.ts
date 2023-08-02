@@ -126,6 +126,20 @@ export class PostsService {
     };
   }
 
+  async checkIfBanned(userId: string, postId: string) {
+    const user = await this.saRepository.findOne(userId);
+    if (!user) return false;
+
+    const findPost = await this.postsRepository.findOne(postId);
+    if (!findPost) return false;
+
+    const bannedBlog = user.banForBlogsInfo.find((info) =>
+      info.blogIds.includes(findPost.blogId),
+    );
+
+    return !bannedBlog;
+  }
+
   async findAllComments(
     id: string,
     queryParams: CommentsQueryParamsDto,

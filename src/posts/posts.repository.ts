@@ -5,11 +5,13 @@ import { Model, Types } from 'mongoose';
 import { PostsQueryParamsDto } from './dto/posts-query-params.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { SaRepository } from '../sa/sa.repository';
+import { Blog, BlogDocument } from '../db/schemas/blogs.schema';
 
 @Injectable()
 export class PostsRepository {
   constructor(
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    @InjectModel(Blog.name) private blogModel: Model<BlogDocument>,
     protected saRepository: SaRepository,
   ) {}
 
@@ -22,8 +24,18 @@ export class PostsRepository {
         pageSize = 10,
       } = queryParams;
 
-      const skipCount = (pageNumber - 1) * pageSize;
       const filter: any = {};
+
+      const bannedBlogs = await this.blogModel
+        .find({ 'banInfo.isBanned': true })
+        .select('id')
+        .exec();
+
+      const bannedBlogIds = bannedBlogs.map((blog) => blog._id.toString());
+
+      filter.blogId = { $nin: bannedBlogIds };
+
+      const skipCount = (pageNumber - 1) * pageSize;
 
       const totalCount = await this.postModel.countDocuments(filter).exec();
       const totalPages = Math.ceil(totalCount / pageSize);
@@ -133,11 +145,7 @@ export class PostsRepository {
 
   async remove(id: string) {
     try {
-      const deletedPost = await this.postModel.findByIdAndDelete(id).exec();
-      if (!deletedPost) {
-        return false;
-      }
-      return true;
+      return await this.postModel.findByIdAndDelete(id).exec();
     } catch (e) {
       return false;
     }
@@ -233,6 +241,10 @@ export class PostsRepository {
       if (!post) {
         return false;
       }
+      const findBlog = await this.blogModel.findById(post.blogId);
+      if (findBlog!.banInfo.isBanned === true) {
+        return false;
+      }
       const mappedPost = await this.mapGetAllPosts([post], userId);
       return mappedPost[0];
     } catch (e) {
@@ -240,4 +252,6 @@ export class PostsRepository {
       return false;
     }
   }
+
+  async findAllComments(userId: string, queryParams: PostsQueryParamsDto) {}
 }

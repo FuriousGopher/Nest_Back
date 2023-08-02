@@ -11,7 +11,7 @@ import { PostsQueryParamsDto } from 'src/posts/dto/posts-query-params.dto';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { BannedUsersQueryParamsDto } from '../blogger/dto/banned-users-query-params.dto';
 import { User, UserDocument } from '../db/schemas/users.schema';
-import { BanUserDto } from '../sa/dto/ban-user.dto';
+import { BanUserForBlogDto } from '../sa/dto/ban-user-for-blog.dto';
 
 @Injectable()
 export class BlogsRepository {
@@ -412,11 +412,11 @@ export class BlogsRepository {
     queryParams: BannedUsersQueryParamsDto,
   ) {
     const {
-      searchLoginTerm = null,
-      sortBy = 'createdAt',
-      sortDirection = 'desc',
-      pageNumber = 1,
-      pageSize = 10,
+      searchLoginTerm = queryParams.searchLoginTerm || null,
+      sortBy = queryParams.sortBy || 'createdAt',
+      sortDirection = queryParams.sortDirection || 'desc',
+      pageNumber = queryParams.pageNumber || 1,
+      pageSize = queryParams.pageSize || 10,
     } = queryParams;
 
     const skipCount = (pageNumber - 1) * pageSize;
@@ -451,9 +451,9 @@ export class BlogsRepository {
       id: user._id.toString(),
       login: user.accountData.login,
       banInfo: {
-        isBanned: user.banForBlogsInfo.map((info) => info.isBanned),
-        banDate: user.banForBlogsInfo.map((info) => info.banDate),
-        banReason: user.banForBlogsInfo.map((info) => info.banReason),
+        isBanned: user.banForBlogsInfo[0].isBanned,
+        banDate: user.banForBlogsInfo[0].banDate,
+        banReason: user.banForBlogsInfo[0].banReason,
       },
     }));
 
@@ -466,64 +466,43 @@ export class BlogsRepository {
     };
   }
 
-  async banUserForBlogs(
-    banUserDto: BanUserDto,
-    userId: string,
-    bloggerId: string,
-  ) {
-    const blogs = await this.blogModel
-      .find({ 'blogOwnerInfo.userId': bloggerId })
+  async banUserForBlogs(banUserDto: BanUserForBlogDto, userId: string) {
+    const updatedData = {
+      $push: {
+        banForBlogsInfo: {
+          isBanned: banUserDto.isBanned,
+          banDate: new Date().toISOString(),
+          banReason: banUserDto.banReason,
+          blogIds: banUserDto.blogId,
+        },
+      },
+    };
+
+    return await this.userModel
+      .findByIdAndUpdate(userId, updatedData, { new: true })
       .exec();
-
-    const blogIds = blogs.map((blog) => blog._id.toString());
-
-    const user = await this.userModel.findById(userId).exec();
-    if (!user) return false;
-
-    for (const blogId of blogIds) {
-      user.banForBlogsInfo.push({
-        isBanned: banUserDto.isBanned,
-        banReason: banUserDto.banReason,
-        banDate: new Date().toISOString(),
-        blogIds: [blogId],
-      });
-    }
-
-    await user.save();
-
-    return true;
   }
 
-  async unBanUserForBlogs(
-    banUserDto: BanUserDto,
-    userId: string,
-    bloggerId: string,
-  ) {
-    const blogs = await this.blogModel
-      .find({ 'blogOwnerInfo.userId': bloggerId })
+  async unBanUserForBlogs(userId: string, banUserDto: BanUserForBlogDto) {
+    const updatedData = {
+      $pull: {
+        banForBlogsInfo: {
+          isBanned: banUserDto.isBanned,
+          banDate: null,
+          banReason: null,
+          blogIds: banUserDto.blogId,
+        },
+      },
+    };
+
+    return await this.userModel
+      .findByIdAndUpdate(userId, updatedData, { new: true })
       .exec();
+  }
 
-    const blogIds = blogs.map((blog) => blog.id);
-
-    const user = await this.userModel.findById(userId).exec();
-    if (!user) return false;
-
-    user.banForBlogsInfo = user.banForBlogsInfo.filter(
-      (banInfo) => !blogIds.includes(banInfo.blogIds[0]),
-    );
-
-    // Add new data for unban
-    for (const blogId of blogIds) {
-      user.banForBlogsInfo.push({
-        isBanned: banUserDto.isBanned,
-        banReason: null,
-        banDate: null,
-        blogIds: [blogId],
-      });
-    }
-
-    await user.save();
-
-    return true;
+  checkOwnerShip(userId: string, blogId: string) {
+    return this.blogModel
+      .findOne({ _id: blogId, 'blogOwnerInfo.userId': userId })
+      .exec();
   }
 }

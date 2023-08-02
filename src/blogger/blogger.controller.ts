@@ -25,6 +25,7 @@ import { PostsService } from '../posts/posts.service';
 import { UpdatePostByBloggerDto } from './dto/update-post-by-blogger.dto';
 import { BannedUsersQueryParamsDto } from './dto/banned-users-query-params.dto';
 import { BanUserDto } from '../sa/dto/ban-user.dto';
+import { BanUserForBlogDto } from '../sa/dto/ban-user-for-blog.dto';
 
 @UseGuards(JwtBearerGuard)
 @Controller('blogger')
@@ -75,6 +76,21 @@ export class BloggerController {
       );
     }
     return getResultAllPosts;
+  }
+
+  @Get('blogs/comments')
+  async findAllComments(
+    @Query() queryParams: PostsQueryParamsDto,
+    @UserIdFromHeaders() userId: string,
+  ) {
+    const result = await this.bloggerService.findAllComments(
+      userId,
+      queryParams,
+    );
+    /*if (!result) {
+      return exceptionHandler(ResultCode.NotFound, 'Comments not found', 'id');
+    }*/
+    return result;
   }
 
   @Post('blogs')
@@ -265,7 +281,16 @@ export class BloggerController {
   async findAllBannedUsersForBlog(
     @Param('id') id: string,
     @Query() queryParams: BannedUsersQueryParamsDto,
+    @UserIdFromHeaders() userId: string,
   ) {
+    const checkOwner = await this.bloggerService.checkOwnerShip(userId, id);
+    if (!checkOwner) {
+      return exceptionHandler(
+        ResultCode.Forbidden,
+        `Blog with ${id} not yours`,
+        'id',
+      );
+    }
     const result = await this.blogsService.findAllBannedUsersForBlog(
       id,
       queryParams,
@@ -285,8 +310,20 @@ export class BloggerController {
   async changeBanStatusOfUser(
     @Param('userId') userId: string,
     @UserIdFromHeaders() bloggerId: string,
-    @Body() banUserDto: BanUserDto,
+    @Body() banUserDto: BanUserForBlogDto,
   ) {
+    const checkOwner = await this.bloggerService.checkOwnerShip(
+      bloggerId,
+      banUserDto.blogId,
+    );
+    if (!checkOwner) {
+      return exceptionHandler(
+        ResultCode.Forbidden,
+        `Blog with ${banUserDto.blogId} not yours`,
+        'id',
+      );
+    }
+
     const findUser = await this.bloggerService.findUser(userId);
     if (!findUser) {
       return exceptionHandler(
@@ -297,7 +334,6 @@ export class BloggerController {
     }
 
     const result = await this.bloggerService.changeBanStatusOfUser(
-      bloggerId,
       banUserDto,
       userId,
     );

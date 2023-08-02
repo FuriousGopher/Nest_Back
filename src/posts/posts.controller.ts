@@ -103,6 +103,14 @@ export class PostsController {
     @Body() createCommentDto: CreateCommentDto,
     @UserIdFromHeaders() userId: any,
   ) {
+    const checkBanStatus = await this.postsService.checkIfBanned(id, userId);
+    if (!checkBanStatus) {
+      return exceptionHandler(
+        ResultCode.Forbidden,
+        `You are banned from this blog`,
+        'id',
+      );
+    }
     const resultCreated = await this.postsService.createComment(
       id,
       createCommentDto,
@@ -122,7 +130,7 @@ export class PostsController {
   async findAllComments(
     @Param('id') id: string,
     @Query() queryParams: CommentsQueryParamsDto,
-    @UserIdFromHeaders() userId,
+    @UserIdFromHeaders() userId: string,
   ) {
     const result = await this.postsService.findAllComments(
       id,

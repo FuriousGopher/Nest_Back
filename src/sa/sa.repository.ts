@@ -117,7 +117,7 @@ export class SaRepository {
   async findOne(id: string) {
     if (!Types.ObjectId.isValid(id)) return false;
     const convertedId = new Types.ObjectId(id);
-    const user = await this.userModel.findById(convertedId);
+    const user = await this.userModel.findById(convertedId).exec();
     if (!user) {
       return false;
     }
@@ -205,14 +205,13 @@ export class SaRepository {
     });
   }
 
-  async banUser(id: string, banStatus: boolean, banReason: string) {
+  async banUser(id: string, banStatus: boolean) {
     try {
       const result = await this.userModel.findByIdAndUpdate(
         { _id: id },
         {
           'banInfo.isBanned': banStatus,
           'banInfo.banDate': new Date().toISOString(),
-          'banInfo.banReason': banReason,
         },
       );
       return result;

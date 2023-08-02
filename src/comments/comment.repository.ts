@@ -52,16 +52,12 @@ export class CommentRepository {
       (u) => !bannedUsers.includes(u.userId),
     );
 
-    console.log(allowedUsers);
-
     const likesCountCheck = allowedUsers.filter(
       (u) => u.likeStatus === 'Like',
     ).length;
     const dislikeCountCheck = allowedUsers.filter(
       (u) => u.likeStatus === 'Dislike',
     ).length;
-
-    console.log(likesCountCheck, dislikeCountCheck);
 
     return {
       id: result.id,

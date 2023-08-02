@@ -7,6 +7,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Blog, BlogDocument } from '../db/schemas/blogs.schema';
 import { BanUserDto } from '../sa/dto/ban-user.dto';
+import { PostsQueryParamsDto } from '../posts/dto/posts-query-params.dto';
+import { PostsRepository } from '../posts/posts.repository';
+import { BanUserForBlogDto } from '../sa/dto/ban-user-for-blog.dto';
 
 @Injectable()
 export class BloggerService {
@@ -14,6 +17,7 @@ export class BloggerService {
     @Inject(BlogsRepository)
     protected blogsRepository: BlogsRepository,
     protected saRepository: SaRepository,
+    protected postsRepository: PostsRepository,
 
     @InjectModel(Blog.name) private blogModel: Model<BlogDocument>,
   ) {}
@@ -52,25 +56,21 @@ export class BloggerService {
     return await this.saRepository.findOne(userId);
   }
 
-  async changeBanStatusOfUser(
-    bloggerId: string,
-    banUserDto: BanUserDto,
-    userId: string,
-  ) {
+  async changeBanStatusOfUser(banUserDto: BanUserForBlogDto, userId: string) {
     if (banUserDto.isBanned) {
-      return await this.blogsRepository.banUserForBlogs(
-        banUserDto,
-        userId,
-        bloggerId,
-      );
+      return await this.blogsRepository.banUserForBlogs(banUserDto, userId);
     }
 
     if (!banUserDto.isBanned) {
-      return await this.blogsRepository.unBanUserForBlogs(
-        banUserDto,
-        userId,
-        bloggerId,
-      );
+      return await this.blogsRepository.unBanUserForBlogs(userId, banUserDto);
     }
+  }
+
+  async findAllComments(userId: string, queryParams: PostsQueryParamsDto) {
+    return await this.postsRepository.findAllComments(userId, queryParams);
+  }
+
+  async checkOwnerShip(userId: string, blogId: string) {
+    return this.blogsRepository.checkOwnerShip(userId, blogId);
   }
 }

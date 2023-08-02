@@ -78,15 +78,13 @@ export class SaService {
   async unBunUser(id: string, banUserDto: BanUserDto) {
     const banStatus = banUserDto.isBanned;
 
-    const banReason = banUserDto.banReason;
-
     const user = await this.saRepository.findOne(id);
     if (!user) {
       return false;
     }
 
     if (banStatus) {
-      await this.saRepository.banUser(id, banStatus, banReason);
+      await this.saRepository.banUser(id, banStatus);
       return true;
     }
 
