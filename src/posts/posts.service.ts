@@ -5,7 +5,7 @@ import { PostsRepository } from './posts.repository';
 import { BlogsRepository } from '../blogs/blogs.repository';
 import { CreateCommentDto } from '../comments/dto/create-comment.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { Comment } from '../db/schemas/comments.schema';
+import { Comment, CommentDocument } from '../db/schemas/comments.schema';
 import { Model } from 'mongoose';
 import { SaRepository } from '../sa/sa.repository';
 import { CommentRepository } from '../comments/comment.repository';
@@ -21,7 +21,7 @@ export class PostsService {
     protected saRepository: SaRepository,
     protected commentRepository: CommentRepository,
     protected blogsRepository: BlogsRepository,
-    @InjectModel(Comment.name) private commentModel: Model<Comment>,
+    @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
   ) {}
 
@@ -128,9 +128,11 @@ export class PostsService {
 
   async checkIfBanned(userId: string, postId: string) {
     const user = await this.saRepository.findOne(userId);
+
     if (!user) return false;
 
     const findPost = await this.postsRepository.findOne(postId);
+
     if (!findPost) return false;
 
     const bannedBlog = user.banForBlogsInfo.find((info) =>

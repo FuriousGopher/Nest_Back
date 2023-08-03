@@ -99,11 +99,14 @@ export class PostsController {
   @UseGuards(JwtBearerGuard)
   @Post(':id/comments')
   async createComment(
-    @Param('id') id: string,
+    @Param('id') postId: string,
     @Body() createCommentDto: CreateCommentDto,
     @UserIdFromHeaders() userId: any,
   ) {
-    const checkBanStatus = await this.postsService.checkIfBanned(id, userId);
+    const checkBanStatus = await this.postsService.checkIfBanned(
+      userId,
+      postId,
+    );
     if (!checkBanStatus) {
       return exceptionHandler(
         ResultCode.Forbidden,
@@ -112,14 +115,14 @@ export class PostsController {
       );
     }
     const resultCreated = await this.postsService.createComment(
-      id,
+      postId,
       createCommentDto,
       userId,
     );
     if (!resultCreated) {
       return exceptionHandler(
         ResultCode.NotFound,
-        `Post with this ${id} not found`,
+        `Post with this ${postId} not found`,
         'id',
       );
     }

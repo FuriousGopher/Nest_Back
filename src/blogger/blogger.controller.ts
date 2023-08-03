@@ -87,9 +87,9 @@ export class BloggerController {
       userId,
       queryParams,
     );
-    /*if (!result) {
+    if (!result) {
       return exceptionHandler(ResultCode.NotFound, 'Comments not found', 'id');
-    }*/
+    }
     return result;
   }
 
@@ -283,6 +283,14 @@ export class BloggerController {
     @Query() queryParams: BannedUsersQueryParamsDto,
     @UserIdFromHeaders() userId: string,
   ) {
+    const findBlog = await this.blogsService.findOne(id);
+    if (!findBlog) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'Blog with this id not found',
+        'id',
+      );
+    }
     const checkOwner = await this.bloggerService.checkOwnerShip(userId, id);
     if (!checkOwner) {
       return exceptionHandler(
@@ -312,6 +320,15 @@ export class BloggerController {
     @UserIdFromHeaders() bloggerId: string,
     @Body() banUserDto: BanUserForBlogDto,
   ) {
+    const findUser = await this.bloggerService.findUser(userId);
+    if (!findUser) {
+      return exceptionHandler(
+        ResultCode.NotFound,
+        'User with this id not found',
+        'id',
+      );
+    }
+
     const checkOwner = await this.bloggerService.checkOwnerShip(
       bloggerId,
       banUserDto.blogId,
@@ -320,15 +337,6 @@ export class BloggerController {
       return exceptionHandler(
         ResultCode.Forbidden,
         `Blog with ${banUserDto.blogId} not yours`,
-        'id',
-      );
-    }
-
-    const findUser = await this.bloggerService.findUser(userId);
-    if (!findUser) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'User with this id not found',
         'id',
       );
     }

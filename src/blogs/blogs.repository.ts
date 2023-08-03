@@ -38,11 +38,22 @@ export class BlogsRepository {
       const skipCount = (pageNumber - 1) * pageSize;
       const filter: any = {};
 
+      const bannedBlogs = await this.blogModel
+        .find({ 'banInfo.isBanned': true })
+        .select('id')
+        .exec();
+
+      const bannedBlogIds = bannedBlogs.map((blog) => blog._id.toString());
+
       if (searchNameTerm) {
         filter['name'] = {
           $regex: searchNameTerm,
           $options: 'i',
         };
+      }
+
+      if (bannedBlogIds.length > 0) {
+        filter._id = { $nin: bannedBlogIds };
       }
 
       const totalCount = await this.blogModel.countDocuments(filter).exec();
@@ -121,6 +132,8 @@ export class BlogsRepository {
       if (!blog) {
         return false;
       }
+      if (blog.banInfo.isBanned) return false;
+
       return {
         id: blog._id.toString(),
         name: blog.name,
@@ -419,6 +432,13 @@ export class BlogsRepository {
       pageSize = queryParams.pageSize || 10,
     } = queryParams;
 
+    const sortKeyMapping = {
+      login: 'accountData.login',
+      createdAt: 'createdAt',
+    };
+
+    const sortKey = sortKeyMapping[sortBy] || 'createdAt';
+
     const skipCount = (pageNumber - 1) * pageSize;
     const filter: any = {
       banForBlogsInfo: {
@@ -442,7 +462,7 @@ export class BlogsRepository {
 
     const users = await this.userModel
       .find(filter)
-      .sort({ [sortBy]: sortDirection === 'desc' ? -1 : 1 })
+      .sort({ [sortKey]: sortDirection === 'desc' ? -1 : 1 })
       .skip(skipCount)
       .limit(pageSize)
       .exec();
