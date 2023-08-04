@@ -11,7 +11,7 @@ import { JwtRefreshTokenStrategy } from './strategies/jwt-refresh.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { SaModule } from '../sa/sa.module';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from '../db/schemas/users.schema';
+import { UserMongo, UserSchema } from '../db/schemas/users.schema';
 import { CqrsModule } from '@nestjs/cqrs';
 import { MailModule } from '../utils/mailer/mail.module';
 import { TokensCreate } from './tokens/tokens-create';
@@ -22,6 +22,8 @@ import { IsEmailExistConstraint } from '../decorators/unique-email.decorator';
 import { SecurityModule } from '../security/security.module';
 import { DevicesRepository } from '../security/devices.repository';
 import { Device, DeviceSchema } from '../db/schemas/device.schema';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from './entities/user.entity';
 
 const strategies = [
   BasicStrategy,
@@ -39,11 +41,12 @@ const strategies = [
     PassportModule,
     JwtModule,
     ConfigModule,
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([{ name: UserMongo.name, schema: UserSchema }]),
     MongooseModule.forFeature([{ name: Device.name, schema: DeviceSchema }]),
     MailModule,
     CqrsModule,
     SecurityModule,
+    TypeOrmModule.forFeature([User]),
   ],
   controllers: [AuthController],
   providers: [

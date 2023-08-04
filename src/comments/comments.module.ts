@@ -15,6 +15,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Comment, CommentSchema } from '../db/schemas/comments.schema';
 import { AuthModule } from '../auth/auth.module';
 import { TokenParserMiddleware } from '../middlewares/token-parser.middleware';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from '../auth/entities/user.entity';
 
 const strategies = [
   BasicStrategy,
@@ -31,6 +33,7 @@ const strategies = [
     CqrsModule,
     MongooseModule.forFeature([{ name: Comment.name, schema: CommentSchema }]),
     AuthModule,
+    TypeOrmModule.forFeature([User]),
   ],
   controllers: [CommentsController],
   providers: [CommentsService, ...strategies, CommentRepository, ConfigService],

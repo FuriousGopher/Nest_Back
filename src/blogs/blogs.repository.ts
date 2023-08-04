@@ -10,7 +10,7 @@ import { PostsRepository } from '../posts/posts.repository';
 import { PostsQueryParamsDto } from 'src/posts/dto/posts-query-params.dto';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { BannedUsersQueryParamsDto } from '../blogger/dto/banned-users-query-params.dto';
-import { User, UserDocument } from '../db/schemas/users.schema';
+import { UserMongo, UserDocument } from '../db/schemas/users.schema';
 import { BanUserForBlogDto } from '../sa/dto/ban-user-for-blog.dto';
 
 @Injectable()
@@ -18,7 +18,7 @@ export class BlogsRepository {
   constructor(
     @InjectModel(Blog.name) private blogModel: Model<BlogDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(UserMongo.name) private userModel: Model<UserDocument>,
     @Inject(PostsRepository)
     protected postsRepository: PostsRepository,
   ) {}

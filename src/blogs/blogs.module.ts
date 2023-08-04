@@ -13,7 +13,9 @@ import { AuthModule } from '../auth/auth.module';
 import { CqrsModule } from '@nestjs/cqrs';
 import { JwtModule } from '@nestjs/jwt';
 import { PostsModule } from '../posts/posts.module';
-import { User, UserSchema } from '../db/schemas/users.schema';
+import { UserMongo, UserSchema } from '../db/schemas/users.schema';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from '../auth/entities/user.entity';
 
 const strategies = [
   BasicStrategy,
@@ -25,11 +27,12 @@ const strategies = [
   imports: [
     MongooseModule.forFeature([{ name: Blog.name, schema: BlogSchema }]),
     MongooseModule.forFeature([{ name: Post.name, schema: PostSchema }]),
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([{ name: UserMongo.name, schema: UserSchema }]),
     AuthModule,
     CqrsModule,
     JwtModule,
     PostsModule,
+    TypeOrmModule.forFeature([User]),
   ],
   controllers: [BlogsController],
   providers: [BlogsService, BlogsRepository, ...strategies],

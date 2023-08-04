@@ -11,6 +11,8 @@ import { AuthModule } from '../auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Blog, BlogSchema } from '../db/schemas/blogs.schema';
 import { PostsModule } from '../posts/posts.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from '../auth/entities/user.entity';
 
 @Module({
   imports: [
@@ -22,6 +24,7 @@ import { PostsModule } from '../posts/posts.module';
     JwtModule,
     CqrsModule,
     AuthModule,
+    TypeOrmModule.forFeature([User]),
   ],
   controllers: [BloggerController],
   providers: [BloggerService, JwtBearerStrategy],

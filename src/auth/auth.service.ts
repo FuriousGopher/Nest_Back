@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { RegistrationDto } from './dto/registration.dto';
 import { SaRepository } from '../sa/sa.repository';
 import { InjectModel } from '@nestjs/mongoose';
-import { User, UserDocument } from '../db/schemas/users.schema';
+import { UserMongo, UserDocument } from '../db/schemas/users.schema';
 import { Model } from 'mongoose';
 import { v4 } from 'uuid';
 import { add } from 'date-fns';
@@ -18,7 +18,7 @@ export class AuthService {
     protected saRepository: SaRepository,
     @Inject(MailAdapter)
     protected mailAdapter: MailAdapter,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(UserMongo.name) private userModel: Model<UserDocument>,
   ) {}
 
   async registration(registrationDto: RegistrationDto) {

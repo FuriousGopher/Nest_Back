@@ -3,7 +3,7 @@ import { SaRepository } from './sa.repository';
 import { genSalt, hash } from 'bcryptjs';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { User, UserDocument } from '../db/schemas/users.schema';
+import { UserMongo, UserDocument } from '../db/schemas/users.schema';
 import { Model } from 'mongoose';
 import { BanUserDto } from './dto/ban-user.dto';
 import { BlogsRepository } from '../blogs/blogs.repository';
@@ -16,7 +16,7 @@ export class SaService {
     protected saRepository: SaRepository,
     protected blogsRepository: BlogsRepository,
 
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(UserMongo.name) private userModel: Model<UserDocument>,
   ) {}
 
   getAllUsers(queryParams: UserQueryParamsDto) {
@@ -29,37 +29,7 @@ export class SaService {
 
       const passwordHash = await hash(createUserDto.password, passwordSalt);
 
-      const newUser = new this.userModel({
-        accountData: {
-          login: createUserDto.login,
-          email: createUserDto.email,
-          passwordHash: passwordHash,
-          createdAt: new Date().toISOString(),
-          isMembership: true,
-        },
-        emailConfirmation: {
-          isConfirmed: true,
-        },
-        banInfo: {
-          isBanned: false,
-          banDate: null,
-          banReason: null,
-        },
-      });
-
-      await this.saRepository.saveUser(newUser);
-
-      return {
-        id: newUser._id,
-        login: newUser.accountData.login,
-        email: newUser.accountData.email,
-        createdAt: newUser.accountData.createdAt,
-        banInfo: {
-          isBanned: newUser.banInfo.isBanned,
-          banDate: newUser.banInfo.banDate,
-          banReason: newUser.banInfo.banReason,
-        },
-      };
+      return await this.saRepository.createUser(createUserDto, passwordHash);
     } catch (error) {
       console.error('Error', error);
 

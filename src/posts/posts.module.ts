@@ -7,7 +7,7 @@ import { CommentRepository } from '../comments/comment.repository';
 import { BlogsRepository } from '../blogs/blogs.repository';
 import { Comment, CommentSchema } from '../db/schemas/comments.schema';
 import { Post, PostSchema } from '../db/schemas/posts.schema';
-import { User, UserSchema } from '../db/schemas/users.schema';
+import { UserMongo, UserSchema } from '../db/schemas/users.schema';
 import { Blog, BlogSchema } from '../db/schemas/blogs.schema';
 import { BasicStrategy } from '../auth/strategies/basic.strategy';
 import { JwtBearerStrategy } from '../auth/strategies/jwt-bearer.strategy';
@@ -18,8 +18,9 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { TokenParserMiddleware } from '../middlewares/token-parser.middleware';
 import { JwtModule } from '@nestjs/jwt';
 import { IsBlogExistConstraint } from '../decorators/blog-exists.decorator';
-import { SaModule } from '../sa/sa.module';
 import { SaRepository } from '../sa/sa.repository';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from '../auth/entities/user.entity';
 
 const strategies = [
   BasicStrategy,
@@ -33,12 +34,13 @@ const strategies = [
     MongooseModule.forFeature([
       { name: Post.name, schema: PostSchema },
       { name: Comment.name, schema: CommentSchema },
-      { name: User.name, schema: UserSchema },
+      { name: UserMongo.name, schema: UserSchema },
       { name: Blog.name, schema: BlogSchema },
     ]),
     AuthModule,
     CqrsModule,
     JwtModule,
+    TypeOrmModule.forFeature([User]),
   ],
   controllers: [PostsController],
   providers: [

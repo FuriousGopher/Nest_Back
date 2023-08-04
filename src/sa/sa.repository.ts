@@ -1,13 +1,48 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../auth/entities/user.entity';
+import { CreateUserDto } from './dto/create-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { User, UserDocument } from '../db/schemas/users.schema';
 import { Model, Types } from 'mongoose';
+import { UserDocument, UserMongo } from '../db/schemas/users.schema';
 import { UserQueryParamsDto } from './dto/userQueryParams.dto';
 import { UsersResponseDto } from './dto/usersResponse.dto';
 
 @Injectable()
 export class SaRepository {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(UserMongo.name) private userModel: Model<UserDocument>,
+    @InjectRepository(User) private userRepository: Repository<User>,
+  ) {}
+
+  async createUser(createUserDto: CreateUserDto, passwordHash: string) {
+    const user = this.userRepository.create({
+      login: createUserDto.login,
+      passwordHash: passwordHash,
+      email: createUserDto.email,
+      isConfirmed: true,
+      userBanBySA: {
+        isBanned: false,
+        banDate: null,
+        banReason: null,
+      },
+    });
+
+    const createdUser = await this.userRepository.save(user);
+
+    return {
+      id: createdUser.id,
+      login: user.login,
+      email: user.email,
+      createdAt: user.createdAt,
+      banInfo: {
+        isBanned: user.userBanBySA.isBanned,
+        banDate: user.userBanBySA.banDate,
+        banReason: user.userBanBySA.banReason,
+      },
+    };
+  }
 
   async findBannedUsersFromArrayOfIds(ids: Types.ObjectId[]) {
     const users = await this.userModel.find({
