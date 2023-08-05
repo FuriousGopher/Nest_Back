@@ -214,7 +214,6 @@ export class PostsRepository {
       !result.extendedLikesInfo ||
       !result.extendedLikesInfo.users
     ) {
-      console.log('if none');
       return 'None';
     }
 

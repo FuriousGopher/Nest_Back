@@ -1,13 +1,16 @@
 import { Controller, Delete, HttpCode } from '@nestjs/common';
-import { TestingService } from './testing.service';
+import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
 
 @Controller('testing/all-data')
 export class TestingController {
-  constructor(private readonly testingService: TestingService) {}
+  constructor(@InjectDataSource() private dataSource: DataSource) {}
 
   @HttpCode(204)
   @Delete()
   remove() {
-    return this.testingService.remove();
+    return this.dataSource.query(
+      `TRUNCATE users, blogs, comments, posts, devices CASCADE;`,
+    );
   }
 }

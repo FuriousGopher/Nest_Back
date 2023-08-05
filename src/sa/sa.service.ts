@@ -15,12 +15,11 @@ export class SaService {
   constructor(
     protected saRepository: SaRepository,
     protected blogsRepository: BlogsRepository,
-
     @InjectModel(UserMongo.name) private userModel: Model<UserDocument>,
   ) {}
 
   getAllUsers(queryParams: UserQueryParamsDto) {
-    return this.saRepository.getAllUsers(queryParams);
+    return this.saRepository.findUsersSQL(queryParams);
   }
 
   async createUser(createUserDto: CreateUserDto) {
@@ -38,28 +37,35 @@ export class SaService {
   }
 
   async deleteUser(id: string) {
-    const user = await this.saRepository.findOne(id);
+    const user = await this.saRepository.findUserByIdSQL(+id);
     if (user) {
-      return await this.saRepository.deleteUser(id);
+      return await this.saRepository.deleteUserSQL(+id);
     }
     return false;
   }
 
   async unBunUser(id: string, banUserDto: BanUserDto) {
     const banStatus = banUserDto.isBanned;
+    const banReason = banUserDto.banReason;
 
-    const user = await this.saRepository.findOne(id);
+    const user = await this.saRepository.findUserForBanBySASQL(id);
     if (!user) {
       return false;
     }
 
     if (banStatus) {
-      await this.saRepository.banUser(id, banStatus);
+      user.userBanBySA.isBanned = true;
+      user.userBanBySA.banReason = banReason;
+      user.userBanBySA.banDate = new Date();
+      await this.saRepository.dataSourceSaveSQL(user.userBanBySA);
       return true;
     }
 
     if (!banStatus) {
-      await this.saRepository.unBanUser(id, banStatus);
+      user.userBanBySA.isBanned = false;
+      user.userBanBySA.banReason = null;
+      user.userBanBySA.banDate = null;
+      await this.saRepository.dataSourceSaveSQL(user.userBanBySA);
       return true;
     }
   }

@@ -18,11 +18,18 @@ import { exceptionHandler } from '../exceptions/exception.handler';
 import { ResultCode } from '../enums/result-code.enum';
 import { BanUserDto } from './dto/ban-user.dto';
 import { BlogsQueryParamsDto } from '../blogs/dto/blogs-query-params.dto';
+import { CommandBus } from '@nestjs/cqrs';
+import { UserCreateCommand } from '../auth/application/use-cases/user-create.use-case';
+import { SaRepository } from './sa.repository';
 
 @UseGuards(BasicAuthGuard)
 @Controller('sa')
 export class SaController {
-  constructor(protected saService: SaService) {}
+  constructor(
+    protected saService: SaService,
+    private commandBus: CommandBus,
+    protected saRepository: SaRepository,
+  ) {}
 
   ///Users
   @Get('users')
@@ -40,15 +47,10 @@ export class SaController {
 
   @Post('users')
   async createUser(@Body() inputModel: CreateUserDto) {
-    const createResult = await this.saService.createUser(inputModel);
-    if (!createResult) {
-      return exceptionHandler(
-        ResultCode.BadRequest,
-        `An error occurred while creating user ${inputModel.login}.`,
-        'login',
-      );
-    }
-    return createResult;
+    const userId = await this.commandBus.execute(
+      new UserCreateCommand(inputModel),
+    );
+    return this.saRepository.findUserByIdMappedSQL(userId);
   }
 
   @HttpCode(204)
