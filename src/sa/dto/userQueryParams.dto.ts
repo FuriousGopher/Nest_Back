@@ -1,9 +1,9 @@
 export class UserQueryParamsDto {
-  searchEmailTerm: string;
+  searchEmailTerm: string | null;
   sortBy: string;
-  sortDirection: string;
+  sortDirection: 'ASC' | 'DESC' = 'DESC';
   pageNumber: number;
   pageSize: number;
   searchLoginTerm: string;
-  banStatus: string;
+  banStatus: boolean | string;
 }

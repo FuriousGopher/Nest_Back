@@ -8,17 +8,31 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../auth/entities/user.entity';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UserMongo, UserSchema } from '../db/schemas/users.schema';
+import { CqrsModule } from '@nestjs/cqrs';
+import { UserCreateUseCase } from '../auth/application/use-cases/user-create.use-case';
+import { UserBanByBlogger } from '../auth/entities/user-ban-by-blogger.entity';
+import { UserEmailConfirmation } from '../auth/entities/user-email-confirmation.entity';
+import { UserPasswordRecovery } from '../auth/entities/user-password-recovery.entity';
+import { UserBanBySA } from '../auth/entities/user-ban-by-sa.entity';
 
 const strategies = [BasicStrategy];
 
+const entities = [
+  User,
+  UserEmailConfirmation,
+  UserPasswordRecovery,
+  UserBanBySA,
+  UserBanByBlogger,
+];
 @Module({
   imports: [
+    CqrsModule,
     BlogsModule,
     MongooseModule.forFeature([{ name: UserMongo.name, schema: UserSchema }]),
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([...entities]),
   ],
   controllers: [SaController],
-  providers: [SaService, SaRepository, ...strategies],
+  providers: [SaService, SaRepository, ...strategies, UserCreateUseCase],
   exports: [SaRepository],
 })
 export class SaModule {}
