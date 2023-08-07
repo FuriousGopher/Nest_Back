@@ -20,6 +20,7 @@ export class UserQueryParamsDto {
   sortDirection: any;
 
   pageNumber: number;
+
   pageSize: number;
   searchLoginTerm: string;
 
