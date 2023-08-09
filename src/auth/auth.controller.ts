@@ -36,6 +36,12 @@ import { JwtService } from '@nestjs/jwt';
 import { UserIdFromHeaders } from '../decorators/user-id-from-headers.decorator';
 import { JwtBearerGuard } from './guards/jwt-bearer.guard';
 import { ThrottleLogin } from '../decorators/throttle.decorator';
+import { RegistrationCommand } from './use-cases/registration/registration.use-case';
+import { RegistrationConfirmationCommand } from './use-cases/registration/registration-confirmation.use-case';
+import { RegistrationEmailResendCommand } from './use-cases/registration/registration-email-resend.use-case';
+import { DeviceCreateCommand } from './use-cases/security-devices/device-create-for-login.use-case';
+import { UpdateDeviceList } from './use-cases/security-devices/device-update-for-tokens.use-case';
+import { DeviceDeleteAfterLogOut } from './use-cases/security-devices/device-delete-for-logout.use-case';
 
 @Controller('auth')
 export class AuthController {
@@ -49,9 +55,52 @@ export class AuthController {
 
   @HttpCode(204)
   @UseGuards(ThrottlerGuard)
+  @Post('registration')
+  async registration(@Body() registrationDto: RegistrationDto) {
+    return this.commandBus.execute(new RegistrationCommand(registrationDto));
+  }
+
+  @HttpCode(204)
+  @UseGuards(ThrottlerGuard)
+  @Post('registration-confirmation') /// work
+  async confirmationOfEmail(@Body() confirmationCode: ConfirmationCodeDto) {
+    const result = await this.commandBus.execute(
+      new RegistrationConfirmationCommand(confirmationCode),
+    );
+    if (!result) {
+      return exceptionHandler(
+        ResultCode.BadRequest,
+        'Code is incorrect',
+        'code',
+      );
+    }
+    return result;
+  }
+
+  @UseGuards(ThrottlerGuard)
+  @Post('registration-email-resending') /// work
+  @HttpCode(204)
+  async emailResending(@Body() emailResendingDto: RecoveryEmailDto) {
+    const result = await this.commandBus.execute(
+      new RegistrationEmailResendCommand(emailResendingDto),
+    );
+
+    if (!result) {
+      return exceptionHandler(
+        ResultCode.BadRequest,
+        'Email is not found or already confirmed',
+        'email',
+      );
+    }
+
+    return result;
+  }
+
+  @HttpCode(204)
+  @UseGuards(ThrottlerGuard)
   @Post('password-recovery') //work
   async pasRecovery(@Body() recoveryDto: RecoveryEmailDto) {
-    return await this.authService.recoveryPass(recoveryDto);
+    return;
   }
 
   @HttpCode(204)
@@ -64,8 +113,8 @@ export class AuthController {
     );
   }
 
-  /*@ThrottleLogin(5, 10)*/
-  @UseGuards(/*ThrottlerGuard*/ LocalAuthGuard)
+  @ThrottleLogin(5, 10)
+  @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(200)
   async login(
@@ -80,10 +129,8 @@ export class AuthController {
       new TokensCreateCommand(userId),
     );
 
-    await this.securityService.saveDeviceForLogin(
-      tokens.refreshToken,
-      ip,
-      userAgent,
+    await this.commandBus.execute(
+      new DeviceCreateCommand(tokens.refreshToken, ip, userAgent),
     );
 
     res
@@ -114,7 +161,9 @@ export class AuthController {
 
     const newToken = this.jwtService.decode(tokens.refreshToken);
 
-    await this.securityService.updateRefToken(newToken, ip, userAgent);
+    await this.commandBus.execute(
+      new UpdateDeviceList(newToken, ip, userAgent),
+    );
 
     res
       .cookie('refreshToken', tokens.refreshToken, {
@@ -124,66 +173,25 @@ export class AuthController {
       .json({ accessToken: tokens.accessToken });
   }
 
-  @HttpCode(204)
-  @UseGuards(ThrottlerGuard)
-  @Post('registration-confirmation') /// work
-  async confirmationOfEmail(@Body() confirmationCode: ConfirmationCodeDto) {
-    const result = await this.authService.confirmationOfEmail(confirmationCode);
-
-    if (!result) {
-      return exceptionHandler(
-        ResultCode.BadRequest,
-        confirmCodeIsIncorrect,
-        confirmCodeField,
-      );
-    }
-
-    return result;
-  }
-
-  @UseGuards(ThrottlerGuard)
-  @Post('registration-email-resending') /// work
-  @HttpCode(204)
-  async emailResending(@Body() emailResendingDto: RecoveryEmailDto) {
-    const resend = await this.authService.emailResending(emailResendingDto);
-
-    if (!resend) {
-      return exceptionHandler(
-        ResultCode.BadRequest,
-        userNotFoundOrConfirmed,
-        emailField,
-      );
-    }
-
-    return resend;
-  }
-
-  @HttpCode(204)
-  /*@UseGuards(ThrottlerGuard)*/
-  @Post('registration')
-  async registration(@Body() registrationDto: RegistrationDto) {
-    return await this.authService.registration(registrationDto);
-  }
-
   @UseGuards(JwtRefreshGuard)
   @Post('logout')
   @HttpCode(204)
   async logout(@RefreshToken() refreshToken) {
     const decodedToken: any = this.jwtService.decode(refreshToken);
     const deviceId = decodedToken.deviceId;
-    return this.securityService.deviceDelete(deviceId);
+    return this.commandBus.execute(new DeviceDeleteAfterLogOut(deviceId));
   }
 
   @UseGuards(JwtBearerGuard)
   @Get('me')
-  async getMe(@UserIdFromHeaders() userId) {
-    const user = await this.usersRepository.findOne(userId);
+  async getMe(@UserIdFromHeaders() userId: string) {
+    const user = await this.usersRepository.findUserByIdSQL(+userId);
     if (!user) throw new Error('User not found');
 
     return {
-      email: user.accountData.email,
-      login: user.accountData.login,
-      userId: user._id.toString(),
+      email: user.email,
+      login: user.login,
+      userId: userId.toString(),
     };
   }
 }

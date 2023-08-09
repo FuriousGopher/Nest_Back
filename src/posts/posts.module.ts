@@ -21,12 +21,24 @@ import { IsBlogExistConstraint } from '../decorators/blog-exists.decorator';
 import { SaRepository } from '../sa/sa.repository';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../auth/entities/user.entity';
+import { UserBanByBlogger } from '../auth/entities/user-ban-by-blogger.entity';
+import { UserEmailConfirmation } from '../auth/entities/user-email-confirmation.entity';
+import { UserPasswordRecovery } from '../auth/entities/user-password-recovery.entity';
+import { UserBanBySA } from '../auth/entities/user-ban-by-sa.entity';
 
 const strategies = [
   BasicStrategy,
   JwtBearerStrategy,
   LocalStrategy,
   JwtRefreshTokenStrategy,
+];
+
+const entities = [
+  User,
+  UserEmailConfirmation,
+  UserPasswordRecovery,
+  UserBanBySA,
+  UserBanByBlogger,
 ];
 
 @Module({
@@ -40,7 +52,7 @@ const strategies = [
     AuthModule,
     CqrsModule,
     JwtModule,
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([...entities]),
   ],
   controllers: [PostsController],
   providers: [

@@ -13,12 +13,16 @@ import { RefreshToken } from '../decorators/refresh-token.decorator';
 import { JwtService } from '@nestjs/jwt';
 import { exceptionHandler } from '../exceptions/exception.handler';
 import { ResultCode } from '../enums/result-code.enum';
+import { CommandBus } from '@nestjs/cqrs';
+import { DeviceDeleteById } from '../auth/use-cases/security-devices/device-delete-for-terminate.use-case';
+import { DevicesDeleteOldCommand } from '../auth/use-cases/security-devices/devices-delete-old.use-case';
 
 @Controller('security')
 export class SecurityController {
   constructor(
     private readonly securityService: SecurityService,
     private readonly jwtService: JwtService,
+    private commandBus: CommandBus,
   ) {}
 
   @UseGuards(JwtRefreshGuard)
@@ -33,7 +37,9 @@ export class SecurityController {
   removeAllButOne(@RefreshToken() refreshToken, @UserIdFromGuard() userId) {
     const decodedToken: any = this.jwtService.decode(refreshToken);
     const deviceId = decodedToken?.deviceId;
-    return this.securityService.removeOldOnes(deviceId, userId);
+    return this.commandBus.execute(
+      new DevicesDeleteOldCommand(deviceId, userId),
+    );
   }
 
   @UseGuards(JwtRefreshGuard)
@@ -48,7 +54,11 @@ export class SecurityController {
         'id',
       );
     }
-    const result = await this.securityService.removeById(deviceId, userId);
+
+    const result = await this.commandBus.execute(
+      new DeviceDeleteById(deviceId, userId),
+    );
+
     if (!result) {
       return exceptionHandler(
         ResultCode.Forbidden,

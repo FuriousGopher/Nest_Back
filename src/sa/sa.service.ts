@@ -15,14 +15,14 @@ export class SaService {
   constructor(
     protected saRepository: SaRepository,
     protected blogsRepository: BlogsRepository,
-    @InjectModel(UserMongo.name) private userModel: Model<UserDocument>,
-  ) {}
+  ) /* @InjectModel(UserMongo.name) private userModel: Model<UserDocument>,*/
+  {}
 
   getAllUsers(queryParams: UserQueryParamsDto) {
     return this.saRepository.findUsersSQL(queryParams);
   }
 
-  async createUser(createUserDto: CreateUserDto) {
+  /* async createUser(createUserDto: CreateUserDto) {
     try {
       const passwordSalt = await genSalt(10);
 
@@ -34,7 +34,7 @@ export class SaService {
 
       return false;
     }
-  }
+  }*/
 
   async deleteUser(id: string) {
     const user = await this.saRepository.findUserByIdSQL(+id);

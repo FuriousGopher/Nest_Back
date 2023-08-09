@@ -9,7 +9,9 @@ import { IsEmailExist } from '../../decorators/unique-email.decorator';
 import { IsLoginExist } from '../../decorators/unique-login.decorator';
 
 export class RegistrationDto {
-  @IsLoginExist()
+  @IsLoginExist({
+    message: 'Login is already exist',
+  })
   @IsString()
   @Matches(/^[a-zA-Z0-9_-]*$/, {
     message: 'Name should content only letters and numbers',
@@ -23,7 +25,9 @@ export class RegistrationDto {
   login: string;
 
   @IsEmail()
-  @IsEmailExist()
+  @IsEmailExist({
+    message: 'Email is already exist',
+  })
   email: string;
 
   @IsString()

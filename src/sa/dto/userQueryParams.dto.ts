@@ -4,6 +4,7 @@ import { IsOptional } from 'class-validator';
 
 export class UserQueryParamsDto {
   searchEmailTerm: string | null;
+
   sortBy: string;
 
   @IsOptional()

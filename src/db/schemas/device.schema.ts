@@ -1,9 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
-export type DeviceDocument = HydratedDocument<Device>;
+export type DeviceDocument = HydratedDocument<DeviceMongo>;
 @Schema()
-export class Device {
+export class DeviceMongo {
   @Prop()
   id: string;
   @Prop()
@@ -20,4 +20,4 @@ export class Device {
   expirationDate: number;
 }
 
-export const DeviceSchema = SchemaFactory.createForClass(Device);
+export const DeviceSchema = SchemaFactory.createForClass(DeviceMongo);

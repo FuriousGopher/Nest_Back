@@ -1,27 +1,40 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Device, DeviceDocument } from '../db/schemas/device.schema';
+import { DeviceMongo, DeviceDocument } from '../db/schemas/device.schema';
 import { Model } from 'mongoose';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { Device } from './entities/device.entity';
 
 @Injectable()
 export class DevicesRepository {
   constructor(
-    @InjectModel(Device.name) private deviceModel: Model<DeviceDocument>,
+    @InjectModel(DeviceMongo.name) private deviceModel: Model<DeviceDocument>,
+    @InjectRepository(Device)
+    private readonly devicesRepository: Repository<Device>,
+    @InjectDataSource() private dataSource: DataSource,
   ) {}
 
-  async findAll(userId: string) {
-    const foundDevices = await this.deviceModel.find({ userId });
+  async dataSourceSave(entity: Device): Promise<Device> {
+    return this.dataSource.manager.save(entity);
+  }
 
-    if (!foundDevices) {
-      return false;
-    }
+  async findAll(userId: number) {
+    const devices = await this.devicesRepository
+      .createQueryBuilder('d')
+      .where(`d.userId = :userId`, {
+        userId: userId,
+      })
+      .getMany();
 
-    return foundDevices.map((device) => ({
-      ip: device.ip,
-      title: device.title,
-      lastActiveDate: new Date(device.lastActiveDate * 1000).toISOString(),
-      deviceId: device.deviceId,
-    }));
+    return devices.map((d) => {
+      return {
+        ip: d.ip,
+        title: d.title,
+        lastActiveDate: new Date(d.lastActiveDate * 1000).toISOString(),
+        deviceId: d.deviceId,
+      };
+    });
   }
 
   async remove(deviceId: string) {
@@ -29,12 +42,17 @@ export class DevicesRepository {
     return remove.deletedCount !== 0;
   }
 
-  async findDevice(deviceId: string) {
-    const found = await this.deviceModel.findOne({ deviceId: deviceId });
-    if (!found) {
-      return false;
+  async findDevice(deviceId: string): Promise<Device | null> {
+    try {
+      return await this.devicesRepository
+        .createQueryBuilder('d')
+        .where(`d.deviceId = :deviceId`, { deviceId: deviceId })
+        .leftJoinAndSelect('d.user', 'u')
+        .getOne();
+    } catch (e) {
+      console.log(e);
+      return null;
     }
-    return found;
   }
 
   async save(newDevice: DeviceDocument) {
@@ -51,10 +69,24 @@ export class DevicesRepository {
     );
   }
 
-  removeOldOnes(deviceId: string, userId: string) {
-    return this.deviceModel.deleteMany({
-      deviceId: { $ne: deviceId },
-      userId: userId,
-    });
+  async deleteDevice(deviceId: string): Promise<boolean> {
+    const result = await this.devicesRepository
+      .createQueryBuilder('d')
+      .delete()
+      .from(Device)
+      .where('deviceId = :deviceId', { deviceId: deviceId })
+      .execute();
+    return result.affected === 1;
+  }
+
+  async removeOldOnes(deviceId: string, userId: number): Promise<boolean> {
+    const result = await this.devicesRepository
+      .createQueryBuilder('d')
+      .delete()
+      .from(Device)
+      .where('userId = :userId', { userId: userId })
+      .andWhere('deviceId != :deviceId', { deviceId: deviceId })
+      .execute();
+    return result.affected === 1;
   }
 }

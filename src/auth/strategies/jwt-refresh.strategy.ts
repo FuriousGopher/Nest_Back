@@ -3,7 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { refTokFromCookieExtractor } from '../../utils/refTokFromCookie.extractor';
-import { ValidateRefreshTokenCommand } from '../validators/validate-refresh-token';
+import { ValidateRefreshTokenCommand } from '../use-cases/validators/validate-refresh-token.use-case';
 import { CommandBus } from '@nestjs/cqrs';
 
 @Injectable()

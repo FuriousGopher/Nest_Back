@@ -1,12 +1,12 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { DevicesRepository } from '../../security/devices.repository';
+import { DevicesRepository } from '../../../security/devices.repository';
 
 export class ValidateRefreshTokenCommand {
   constructor(public payload: any) {}
 }
 
 @CommandHandler(ValidateRefreshTokenCommand)
-export class ValidateRefreshToken
+export class ValidateRefreshTokenUseCase
   implements ICommandHandler<ValidateRefreshTokenCommand>
 {
   constructor(private readonly devicesRepository: DevicesRepository) {}

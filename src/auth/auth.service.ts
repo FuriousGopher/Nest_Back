@@ -81,7 +81,7 @@ export class AuthService {
     return await this.saRepository.confirmationOfEmail(confirmationCode.code);
   }
 
-  async recoveryPass(recoveryDto: RecoveryEmailDto) {
+  /*async recoveryPass(recoveryDto: RecoveryEmailDto) {
     const findUserByEmail = await this.saRepository.checkEmail(
       recoveryDto.email,
     );
@@ -104,9 +104,9 @@ export class AuthService {
       );
     }
     return true;
-  }
+  }*/
 
-  async emailResending(emailForResending: RecoveryEmailDto) {
+  /*async emailResending(emailForResending: RecoveryEmailDto) {
     const checkEmail = await this.saRepository.checkEmail(
       emailForResending.email,
     );
@@ -129,7 +129,7 @@ export class AuthService {
         newExpirationDate.toString(),
       );
     }
-  }
+  }*/
 
   async newPas(newPassword: string, recoveryCode: string) {
     const findUserByRecoveryCode =
