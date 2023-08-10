@@ -49,7 +49,6 @@ export class AuthController {
     private readonly authService: AuthService,
     private commandBus: CommandBus,
     private readonly usersRepository: SaRepository,
-    private readonly securityService: SecurityService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -113,8 +112,7 @@ export class AuthController {
     );
   }
 
-  @ThrottleLogin(5, 10)
-  @UseGuards(LocalAuthGuard)
+  @UseGuards(ThrottlerGuard, LocalAuthGuard)
   @Post('login')
   @HttpCode(200)
   async login(
@@ -151,6 +149,8 @@ export class AuthController {
     @RefreshToken() refreshToken,
     @Res({ passthrough: true }) res: Response,
   ) {
+    console.log('refreshToken', refreshToken);
+    console.log('userId', userId);
     const userAgent = headers['user-agent'] || 'unknown';
     const decodedToken: any = this.jwtService.decode(refreshToken);
     const deviceId = decodedToken.deviceId;

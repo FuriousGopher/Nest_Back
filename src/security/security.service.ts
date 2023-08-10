@@ -18,7 +18,7 @@ export class SecurityService {
     return this.devicesRepository.findAll(+userId);
   }
 
-  findOne(deviceId: string) {
-    return this.devicesRepository.findDevice(deviceId);
+  async findOne(deviceId: string) {
+    return await this.devicesRepository.findDevice(deviceId);
   }
 }

@@ -42,7 +42,7 @@ export class DevicesRepository {
     return remove.deletedCount !== 0;
   }
 
-  async findDevice(deviceId: string): Promise<Device | null> {
+  async findDevice(deviceId: string) {
     try {
       return await this.devicesRepository
         .createQueryBuilder('d')

@@ -20,7 +20,7 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', width: 10, unique: true })
+  @Column({ type: 'varchar', width: 10, unique: true, collation: 'C' })
   login: string;
 
   @Column({ name: 'passwordHash', type: 'varchar' })

@@ -4,10 +4,7 @@ import { v4 } from 'uuid';
 import { ConfigService } from '@nestjs/config';
 
 export class TokensCreateCommand {
-  constructor(
-    public userId: string,
-    public deviceId = v4().replace(/-/g, ''),
-  ) {}
+  constructor(public userId: string, public deviceId = v4()) {}
 }
 
 @CommandHandler(TokensCreateCommand)
@@ -26,12 +23,12 @@ export class TokensCreate implements ICommandHandler<TokensCreateCommand> {
 
     const accessToken = this.jwtService.sign(accessTokenPayload, {
       secret: this.configService.get('SECRET_KEY'),
-      expiresIn: '10s',
+      expiresIn: '1h',
     });
 
     const refreshToken = this.jwtService.sign(refreshTokenPayload, {
       secret: this.configService.get('SECRET_KEY'),
-      expiresIn: '20s',
+      expiresIn: '1h',
     });
 
     return {

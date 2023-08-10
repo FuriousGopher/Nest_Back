@@ -54,6 +54,7 @@ export class RegistrationEmailResendUseCase
         email,
         confirmationCode,
       );
+      return true;
     } catch (e) {
       console.error(e);
       return null;
