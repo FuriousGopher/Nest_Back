@@ -21,6 +21,9 @@ import { BlogsQueryParamsDto } from '../blogs/dto/blogs-query-params.dto';
 import { CommandBus } from '@nestjs/cqrs';
 import { UserCreateCommand } from '../auth/application/use-cases/user-create.use-case';
 import { SaRepository } from './sa.repository';
+import { BlogBindCommand } from './use-cases/blog-bind.use-case';
+import { BanBlogDto } from './dto/ban-blog.dto';
+import { BlogBanCommand } from './use-cases/blog-ban.use-case';
 
 @UseGuards(BasicAuthGuard)
 @Controller('sa')
@@ -83,16 +86,16 @@ export class SaController {
 
   @HttpCode(204)
   @Put('blogs/:id/bind-with-user/:userId')
-  async bindBlog(@Param('id') id: string, @Param('userId') userId: string) {
-    const result = await this.saService.bindBlog(id, userId);
-    if (!result) {
-      return exceptionHandler(
-        ResultCode.BadRequest,
-        `Blog with id ${id} already bound with user`,
-        'userId',
-      );
+  async bindBlog(@Param() params: any) {
+    const result = await this.commandBus.execute(
+      new BlogBindCommand(params.blogId, params.userId),
+    );
+
+    if (result.code !== ResultCode.Success) {
+      return exceptionHandler(result.code, result.message, result.field);
     }
-    return;
+
+    return result;
   }
 
   @Get('blogs')
@@ -110,15 +113,15 @@ export class SaController {
 
   @HttpCode(204)
   @Put('blogs/:id/ban')
-  async banBlog(@Param('id') id: string, @Body() banUserDto: BanUserDto) {
-    const result = await this.saService.banBlog(id, banUserDto);
+  async banBlog(@Param('id') blogId: string, @Body() banBlogDto: BanBlogDto) {
+    const result = await this.commandBus.execute(
+      new BlogBanCommand(banBlogDto, blogId),
+    );
+
     if (!result) {
-      return exceptionHandler(
-        ResultCode.BadRequest,
-        `Blog with id ${id} not found`,
-        'blog id',
-      );
+      return exceptionHandler(ResultCode.NotFound, 'Blog not found', 'id');
     }
-    return;
+
+    return result;
   }
 }

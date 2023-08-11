@@ -12,7 +12,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SaModule } from '../sa/sa.module';
 import { CqrsModule } from '@nestjs/cqrs';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Comment, CommentSchema } from '../db/schemas/comments.schema';
+import { CommentMongo, CommentSchema } from '../db/schemas/comments.schema';
 import { AuthModule } from '../auth/auth.module';
 import { TokenParserMiddleware } from '../middlewares/token-parser.middleware';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -31,7 +31,9 @@ const strategies = [
     ConfigModule,
     SaModule,
     CqrsModule,
-    MongooseModule.forFeature([{ name: Comment.name, schema: CommentSchema }]),
+    MongooseModule.forFeature([
+      { name: CommentMongo.name, schema: CommentSchema },
+    ]),
     AuthModule,
     TypeOrmModule.forFeature([User]),
   ],

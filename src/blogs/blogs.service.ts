@@ -19,7 +19,7 @@ export class BlogsService {
   }
 
   findAll(queryParams: BlogsQueryParamsDto) {
-    return this.blogsRepository.findAllBlogs(queryParams);
+    return this.blogsRepository.findAllBlogsSQl(queryParams);
   }
 
   async findAllPosts(
@@ -27,7 +27,7 @@ export class BlogsService {
     id: string,
     userId: string,
   ) {
-    const checkForBlogId = await this.blogsRepository.findById(id);
+    const checkForBlogId = await this.blogsRepository.findByIdSQL(id);
     if (!checkForBlogId) {
       return false;
     }
@@ -43,7 +43,7 @@ export class BlogsService {
     id: string,
     userId: string,
   ) {
-    const checkForBlogId = await this.blogsRepository.findById(id);
+    const checkForBlogId = await this.blogsRepository.findByIdSQL(id);
 
     if (!checkForBlogId) {
       return false;
@@ -60,7 +60,7 @@ export class BlogsService {
     createPostDto: createPostByBlogIdDto,
     blogId: string,
   ) {
-    const checkForBlogId = await this.blogsRepository.findById(blogId);
+    const checkForBlogId = await this.blogsRepository.findByIdSQL(blogId);
     if (!checkForBlogId) {
       return false;
     }
@@ -73,7 +73,7 @@ export class BlogsService {
   }
 
   findById(id: string) {
-    return this.blogsRepository.findById(id);
+    return this.blogsRepository.findByIdSQL(id);
   }
 
   async updateOne(id: string, updateBlogDto: UpdateBlogDto) {

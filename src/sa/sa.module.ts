@@ -14,6 +14,8 @@ import { UserBanByBlogger } from '../auth/entities/user-ban-by-blogger.entity';
 import { UserEmailConfirmation } from '../auth/entities/user-email-confirmation.entity';
 import { UserPasswordRecovery } from '../auth/entities/user-password-recovery.entity';
 import { UserBanBySA } from '../auth/entities/user-ban-by-sa.entity';
+import { BlogBindUseCase } from './use-cases/blog-bind.use-case';
+import { BlogBanUseCase } from './use-cases/blog-ban.use-case';
 
 const strategies = [BasicStrategy];
 
@@ -24,6 +26,8 @@ const entities = [
   UserBanBySA,
   UserBanByBlogger,
 ];
+
+const useCases = [UserCreateUseCase, BlogBindUseCase, BlogBanUseCase];
 @Module({
   imports: [
     CqrsModule,
@@ -32,7 +36,7 @@ const entities = [
     TypeOrmModule.forFeature([...entities]),
   ],
   controllers: [SaController],
-  providers: [SaService, SaRepository, ...strategies, UserCreateUseCase],
+  providers: [SaService, SaRepository, ...strategies, ...useCases],
   exports: [SaRepository],
 })
 export class SaModule {}

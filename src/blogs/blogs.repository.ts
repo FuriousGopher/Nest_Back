@@ -1,26 +1,35 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Blog, BlogDocument } from '../db/schemas/blogs.schema';
+import { BlogMongo, BlogDocument } from '../db/schemas/blogs.schema';
 import { Model } from 'mongoose';
 import { BlogsQueryParamsDto } from './dto/blogs-query-params.dto';
 import { BlogsResponseDto } from './dto/blogsResponse.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
-import { Post, PostDocument } from '../db/schemas/posts.schema';
+import { PostMongo, PostDocument } from '../db/schemas/posts.schema';
 import { PostsRepository } from '../posts/posts.repository';
 import { PostsQueryParamsDto } from 'src/posts/dto/posts-query-params.dto';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { BannedUsersQueryParamsDto } from '../blogger/dto/banned-users-query-params.dto';
 import { UserMongo, UserDocument } from '../db/schemas/users.schema';
 import { BanUserForBlogDto } from '../sa/dto/ban-user-for-blog.dto';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { Blog } from './entities/blog.entity';
+import { Paginator } from '../utils/paginator';
+import { BlogBan } from './entities/blog-ban.entity';
+import { Post } from '../posts/entities/post.entity';
 
 @Injectable()
 export class BlogsRepository {
   constructor(
-    @InjectModel(Blog.name) private blogModel: Model<BlogDocument>,
-    @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    @InjectModel(BlogMongo.name) private blogModel: Model<BlogDocument>,
+    @InjectModel(PostMongo.name) private postModel: Model<PostDocument>,
     @InjectModel(UserMongo.name) private userModel: Model<UserDocument>,
     @Inject(PostsRepository)
-    protected postsRepository: PostsRepository,
+    protected postsRepositoryM: PostsRepository,
+    @InjectRepository(Blog) private blogsRepository: Repository<Blog>,
+    @InjectRepository(Post) private postRepository: Repository<Post>,
+    @InjectDataSource() private dataSource: DataSource,
   ) {}
 
   async findAllBlogs(
@@ -118,37 +127,36 @@ export class BlogsRepository {
     }
   }
 
-  async findBlog(id: string) {
+  async findBlog(blogId: string) {
     try {
-      return await this.blogModel.findById({ _id: id }).exec();
+      return await this.blogsRepository
+        .createQueryBuilder('b')
+        .where(`b.id = :blogId`, { blogId: blogId })
+        .getOne();
     } catch (e) {
-      return false;
+      console.log(e);
+      return null;
     }
   }
 
-  async findById(id: string) {
+  async findByIdSQL(blogId: number | string) {
     try {
-      const blog = await this.blogModel.findById({ _id: id }).exec();
-      if (!blog) {
-        return false;
-      }
-      if (blog.banInfo.isBanned) return false;
+      const blogs = await this.blogsRepository
+        .createQueryBuilder('b')
+        .where(`b.id = :blogId`, {
+          blogId: blogId,
+        })
+        .andWhere(`bb.isBanned = false`)
+        .leftJoinAndSelect('b.blogBan', 'bb')
+        .getMany();
 
-      return {
-        id: blog._id.toString(),
-        name: blog.name,
-        description: blog.description,
-        websiteUrl: blog.websiteUrl,
-        createdAt: blog.createdAt,
-        isMembership: blog.isMembership,
-      };
+      const mappedBlogs = await this.blogsMapping(blogs);
+      return mappedBlogs[0];
     } catch (e) {
-      console.error('An error occurred while getting the blog:', e);
-
-      return false;
+      console.log(e);
+      return null;
     }
   }
-
   async findOne(id: string) {
     try {
       const blog = await this.blogModel.findById({ _id: id }).exec();
@@ -257,7 +265,7 @@ export class BlogsRepository {
       page: +pageNumber,
       pageSize: +pageSize,
       totalCount: totalCount,
-      items: await this.postsRepository.mapGetAllPosts(posts, userId),
+      items: await this.postsRepositoryM.mapGetAllPosts(posts, userId),
     };
   }
 
@@ -324,6 +332,57 @@ export class BlogsRepository {
       totalCount: totalCount,
       items: blogsViewModels,
     };
+  }
+
+  async findBlogsForSASQL(query: BlogsQueryParamsDto) {
+    const blogs = await this.blogsRepository
+      .createQueryBuilder('b')
+      .where(`${query.searchNameTerm ? 'b.name ilike :nameTerm' : ''}`, {
+        nameTerm: `%${query.searchNameTerm}%`,
+      })
+      .leftJoinAndSelect('b.blogBan', 'bb')
+      .leftJoinAndSelect('b.user', 'u')
+      .orderBy(`b.${query.sortBy}`, query.sortDirection)
+      .skip((query.pageNumber - 1) * query.pageSize)
+      .take(query.pageSize)
+      .getMany();
+
+    const totalCount = await this.blogsRepository
+      .createQueryBuilder('b')
+      .where(`${query.searchNameTerm ? 'b.name ilike :nameTerm' : ''}`, {
+        nameTerm: `%${query.searchNameTerm}%`,
+      })
+      .leftJoinAndSelect('b.blogBan', 'bb')
+      .leftJoinAndSelect('b.user', 'u')
+      .getCount();
+
+    return Paginator.paginate({
+      pageNumber: query.pageNumber,
+      pageSize: query.pageSize,
+      totalCount: totalCount,
+      items: await this.blogsMappingForSA(blogs),
+    });
+  }
+
+  private async blogsMappingForSA(blogs: Blog[]) {
+    return blogs.map((b) => {
+      return {
+        id: b.id.toString(),
+        name: b.name,
+        description: b.description,
+        websiteUrl: b.websiteUrl,
+        createdAt: b.createdAt,
+        isMembership: b.isMembership,
+        blogOwnerInfo: {
+          userId: b.user.id.toString(),
+          userLogin: b.user.login,
+        },
+        banInfo: {
+          isBanned: b.blogBan.isBanned,
+          banDate: b.blogBan.banDate,
+        },
+      };
+    });
   }
 
   async findAllOwnBlogs(userId: string) {
@@ -524,5 +583,65 @@ export class BlogsRepository {
     return this.blogModel
       .findOne({ _id: blogId, 'blogOwnerInfo.userId': userId })
       .exec();
+  }
+
+  async findBlogForBlogBanSQl(blogId: string): Promise<Blog | null> {
+    try {
+      return await this.blogsRepository
+        .createQueryBuilder('b')
+        .where(`b.id = :blogId`, { blogId: blogId })
+        .leftJoinAndSelect('b.blogBan', 'bb')
+        .getOne();
+    } catch (e) {
+      console.log(e);
+      return null;
+    }
+  }
+
+  async dataSourceSave(entity: Blog | BlogBan): Promise<Blog | BlogBan> {
+    return this.dataSource.manager.save(entity);
+  }
+
+  async findAllBlogsSQl(query: BlogsQueryParamsDto) {
+    const blogs = await this.blogsRepository
+      .createQueryBuilder('b')
+      .where(`${query.searchNameTerm ? 'b.name ilike :nameTerm' : ''}`, {
+        nameTerm: `%${query.searchNameTerm}%`,
+      })
+      .andWhere(`bb.isBanned = false`)
+      .leftJoinAndSelect('b.blogBan', 'bb')
+      .orderBy(`b.${query.sortBy}`, query.sortDirection)
+      .skip((query.pageNumber - 1) * query.pageSize)
+      .take(query.pageSize)
+      .getMany();
+
+    const totalCount = await this.blogsRepository
+      .createQueryBuilder('b')
+      .where(`${query.searchNameTerm ? 'b.name ilike :nameTerm' : ''}`, {
+        nameTerm: `%${query.searchNameTerm}%`,
+      })
+      .andWhere(`bb.isBanned = false`)
+      .leftJoinAndSelect('b.blogBan', 'bb')
+      .getCount();
+
+    return Paginator.paginate({
+      pageNumber: query.pageNumber,
+      pageSize: query.pageSize,
+      totalCount: totalCount,
+      items: await this.blogsMapping(blogs),
+    });
+  }
+
+  private async blogsMapping(blogs: Blog[]) {
+    return blogs.map((b) => {
+      return {
+        id: b.id.toString(),
+        name: b.name,
+        description: b.description,
+        websiteUrl: b.websiteUrl,
+        createdAt: b.createdAt,
+        isMembership: b.isMembership,
+      };
+    });
   }
 }

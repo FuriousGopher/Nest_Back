@@ -14,9 +14,8 @@ import { UserQueryParamsDto } from './dto/userQueryParams.dto';
 export class SaService {
   constructor(
     protected saRepository: SaRepository,
-    protected blogsRepository: BlogsRepository,
-  ) /* @InjectModel(UserMongo.name) private userModel: Model<UserDocument>,*/
-  {}
+    protected blogsRepository: BlogsRepository /* @InjectModel(UserMongo.name) private userModel: Model<UserDocument>,*/,
+  ) {}
 
   getAllUsers(queryParams: UserQueryParamsDto) {
     return this.saRepository.findUsersSQL(queryParams);
@@ -70,7 +69,7 @@ export class SaService {
     }
   }
 
-  async bindBlog(id: string, userId: string) {
+  /*async bindBlog(id: string, userId: string) {
     const blog = await this.blogsRepository.findBlog(id);
     if (!blog) return false;
 
@@ -86,10 +85,10 @@ export class SaService {
       user._id.toString(),
       user.accountData.login,
     );
-  }
+  }*/
 
   async findAllBlogsForSA(queryParams: BlogsQueryParamsDto) {
-    return await this.blogsRepository.findAllBlogsForSA(queryParams);
+    return await this.blogsRepository.findBlogsForSASQL(queryParams);
   }
 
   async banBlog(id: string, banUserDto: BanUserDto) {

@@ -1,7 +1,7 @@
 import { Prop, raw, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
-export type PostDocument = HydratedDocument<Post>;
+export type PostDocument = HydratedDocument<PostMongo>;
 
 export type Users = {
   addedAt: string;
@@ -10,7 +10,7 @@ export type Users = {
   likeStatus: string;
 };
 @Schema()
-export class Post {
+export class PostMongo {
   @Prop() id: string;
   @Prop() title: string;
   @Prop() shortDescription: string;
@@ -34,9 +34,9 @@ export class Post {
   };
 }
 
-export const PostSchema = SchemaFactory.createForClass(Post);
+export const PostSchema = SchemaFactory.createForClass(PostMongo);
 
-PostSchema.pre<Post>('save', function (next) {
+PostSchema.pre<PostMongo>('save', function (next) {
   this.createdAt = new Date().toISOString();
   this.extendedLikesInfo.likesCount = 0;
   this.extendedLikesInfo.dislikesCount = 0;

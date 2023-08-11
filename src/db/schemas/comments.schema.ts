@@ -1,10 +1,10 @@
 import { Prop, raw, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
-export type CommentDocument = HydratedDocument<Comment>;
+export type CommentDocument = HydratedDocument<CommentMongo>;
 
 @Schema()
-export class Comment {
+export class CommentMongo {
   @Prop()
   id: string;
 
@@ -49,9 +49,9 @@ export type UserLikes = {
   likeStatus: string;
 };
 
-export const CommentSchema = SchemaFactory.createForClass(Comment);
+export const CommentSchema = SchemaFactory.createForClass(CommentMongo);
 
-CommentSchema.pre<Comment>('save', function (next) {
+CommentSchema.pre<CommentMongo>('save', function (next) {
   this.createdAt = new Date().toISOString();
   next();
 });

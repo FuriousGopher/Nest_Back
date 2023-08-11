@@ -5,7 +5,7 @@ import { CreateBlogDto } from '../blogs/dto/create-blog.dto';
 import { SaRepository } from '../sa/sa.repository';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Blog, BlogDocument } from '../db/schemas/blogs.schema';
+import { BlogMongo, BlogDocument } from '../db/schemas/blogs.schema';
 import { BanUserDto } from '../sa/dto/ban-user.dto';
 import { PostsQueryParamsDto } from '../posts/dto/posts-query-params.dto';
 import { PostsRepository } from '../posts/posts.repository';
@@ -19,7 +19,7 @@ export class BloggerService {
     protected saRepository: SaRepository,
     protected postsRepository: PostsRepository,
 
-    @InjectModel(Blog.name) private blogModel: Model<BlogDocument>,
+    @InjectModel(BlogMongo.name) private blogModel: Model<BlogDocument>,
   ) {}
   async create(createBlogDto: CreateBlogDto, userId: string) {
     const findUser = await this.saRepository.findOne(userId);

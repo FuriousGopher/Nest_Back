@@ -1,20 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Post, PostDocument } from '../db/schemas/posts.schema';
+import { PostMongo, PostDocument } from '../db/schemas/posts.schema';
 import { Model, Types } from 'mongoose';
 import { PostsQueryParamsDto } from './dto/posts-query-params.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { SaRepository } from '../sa/sa.repository';
-import { Blog, BlogDocument } from '../db/schemas/blogs.schema';
-import { Comment, CommentDocument } from '../db/schemas/comments.schema';
+import { BlogMongo, BlogDocument } from '../db/schemas/blogs.schema';
+import { CommentMongo, CommentDocument } from '../db/schemas/comments.schema';
+import { Paginator } from '../utils/paginator';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { Post } from './entities/post.entity';
+import { DataSource, Repository } from 'typeorm';
+import { PostLike } from './entities/post-like.entity';
+import { LikeStatus } from '../enums/like-status.enum';
 
 @Injectable()
 export class PostsRepository {
   constructor(
-    @InjectModel(Post.name) private postModel: Model<PostDocument>,
-    @InjectModel(Blog.name) private blogModel: Model<BlogDocument>,
-    @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
+    @InjectModel(PostMongo.name) private postModel: Model<PostDocument>,
+    @InjectModel(BlogMongo.name) private blogModel: Model<BlogDocument>,
+    @InjectModel(CommentMongo.name)
+    private commentModel: Model<CommentDocument>,
     protected saRepository: SaRepository,
+    @InjectRepository(Post) private postsRepository: Repository<Post>,
+    @InjectDataSource() private dataSource: DataSource,
   ) {}
 
   async findAllPosts(queryParams: PostsQueryParamsDto, userId: string) {
@@ -337,5 +346,129 @@ export class PostsRepository {
 
       throw e;
     }
+  }
+
+  async findPostsForBlogSQL(
+    query: PostsQueryParamsDto,
+    blogId: string,
+    userId: number,
+  ) {
+    try {
+      const posts = await this.postsRepository
+        .createQueryBuilder('p')
+        .addSelect(
+          (qb) =>
+            qb
+              .select(`count(*)`)
+              .from(PostLike, 'pl')
+              .leftJoin('pl.user', 'u')
+              .leftJoin('u.userBanBySA', 'ubsa')
+              .where('pl.postId = p.id')
+              .andWhere('ubsa.isBanned = false')
+              .andWhere(`pl.likeStatus = 'Like'`),
+          'likes_count',
+        )
+        .addSelect(
+          (qb) =>
+            qb
+              .select(`count(*)`)
+              .from(PostLike, 'pl')
+              .leftJoin('pl.user', 'u')
+              .leftJoin('u.userBanBySA', 'ubsa')
+              .where('pl.postId = p.id')
+              .andWhere('ubsa.isBanned = false')
+              .andWhere(`pl.likeStatus = 'Dislike'`),
+          'dislikes_count',
+        )
+        .addSelect(
+          (qb) =>
+            qb
+              .select('pl.likeStatus')
+              .from(PostLike, 'pl')
+              .where('pl.postId = p.id')
+              .andWhere('pl.userId = :userId', { userId: userId }),
+          'like_status',
+        )
+        .addSelect(
+          (qb) =>
+            qb
+              .select(
+                `jsonb_agg(json_build_object('addedAt', to_char(
+            agg.added_at::timestamp at time zone 'UTC',
+            'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), 'userId', cast(agg.id as varchar), 'login', agg.login)
+                 )`,
+              )
+              .from((qb) => {
+                return qb
+                  .select(`added_at, u.id, u.login`)
+                  .from(PostLike, 'pl')
+                  .leftJoin('pl.user', 'u')
+                  .leftJoin('u.userBanBySA', 'ubsa')
+                  .where('pl.postId = p.id')
+                  .andWhere(`pl.like_status = 'Like'`)
+                  .andWhere('ubsa.isBanned = false')
+                  .orderBy('added_at', 'DESC')
+                  .limit(3);
+              }, 'agg'),
+
+          'newest_likes',
+        )
+        .where(`b.id = :blogId`, {
+          blogId: blogId,
+        })
+        .andWhere(`bb.isBanned = false`)
+        .andWhere(`ubsa.isBanned = false`)
+        .leftJoinAndSelect('p.blog', 'b')
+        .leftJoinAndSelect('b.blogBan', 'bb')
+        .leftJoinAndSelect('b.user', 'u')
+        .leftJoinAndSelect('u.userBanBySA', 'ubsa')
+        .orderBy(`p.${query.sortBy}`, query.sortDirection)
+        .limit(query.pageSize)
+        .offset((query.pageNumber - 1) * query.pageSize)
+        .getRawMany();
+
+      const totalCount = await this.postsRepository
+        .createQueryBuilder('p')
+        .where(`b.id = :blogId`, {
+          blogId: blogId,
+        })
+        .andWhere(`bb.isBanned = false`)
+        .andWhere(`ubsa.isBanned = false`)
+        .leftJoinAndSelect('p.blog', 'b')
+        .leftJoinAndSelect('b.blogBan', 'bb')
+        .leftJoinAndSelect('b.user', 'u')
+        .leftJoinAndSelect('u.userBanBySA', 'ubsa')
+        .getCount();
+
+      return Paginator.paginate({
+        pageNumber: query.pageNumber,
+        pageSize: query.pageSize,
+        totalCount: totalCount,
+        items: await this.postsMapping(posts),
+      });
+    } catch (e) {
+      console.log(e);
+      return null;
+    }
+  }
+
+  private async postsMapping(posts: any[]) {
+    return posts.map((p) => {
+      return {
+        id: p.p_id.toString(),
+        title: p.p_title,
+        shortDescription: p.p_short_description,
+        content: p.p_content,
+        blogId: p.b_id.toString(),
+        blogName: p.b_name,
+        createdAt: p.p_created_at,
+        extendedLikesInfo: {
+          likesCount: Number(p.likes_count),
+          dislikesCount: Number(p.dislikes_count),
+          myStatus: p.like_status || LikeStatus.None,
+          newestLikes: p.newest_likes || [],
+        },
+      };
+    });
   }
 }

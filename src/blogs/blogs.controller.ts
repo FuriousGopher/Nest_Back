@@ -20,9 +20,13 @@ import { exceptionHandler } from '../exceptions/exception.handler';
 import { ResultCode } from '../enums/result-code.enum';
 import { BasicAuthGuard } from '../auth/guards/basic-auth.guard';
 import { UserIdFromHeaders } from '../decorators/user-id-from-headers.decorator';
+import { PostsRepository } from '../posts/posts.repository';
 @Controller('blogs')
 export class BlogsController {
-  constructor(private readonly blogsService: BlogsService) {}
+  constructor(
+    private readonly blogsService: BlogsService,
+    protected postRepository: PostsRepository,
+  ) {}
 
   @UseGuards(BasicAuthGuard)
   @Post()
@@ -74,19 +78,19 @@ export class BlogsController {
     @Param('id') id: string,
     @UserIdFromHeaders() userId: any,
   ) {
-    const getResultAllPosts = await this.blogsService.findAllPosts(
+    const result = await this.postRepository.findPostsForBlogSQL(
       queryParams,
       id,
       userId,
     );
-    if (!getResultAllPosts) {
+    if (!result) {
       return exceptionHandler(
         ResultCode.NotFound,
         'Blog with this id not found',
         'id',
       );
     }
-    return getResultAllPosts;
+    return result;
   }
 
   @Get(':id')

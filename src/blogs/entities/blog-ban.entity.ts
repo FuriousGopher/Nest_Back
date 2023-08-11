@@ -20,7 +20,7 @@ export class BlogBan {
     type: 'timestamp with time zone',
     nullable: true,
   })
-  banDate: Date;
+  banDate: Date | null;
 
   @OneToOne(() => Blog, (blog) => blog.blogBan, {
     onDelete: 'CASCADE',

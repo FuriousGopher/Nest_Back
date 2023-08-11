@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Comment, CommentDocument } from '../db/schemas/comments.schema';
+import { CommentMongo, CommentDocument } from '../db/schemas/comments.schema';
 import { Model, Types } from 'mongoose';
 import { CommentsQueryParamsDto } from '../posts/dto/comments-query-params.dto';
 import { SaRepository } from '../sa/sa.repository';
@@ -8,7 +8,8 @@ import { SaRepository } from '../sa/sa.repository';
 @Injectable()
 export class CommentRepository {
   constructor(
-    @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
+    @InjectModel(CommentMongo.name)
+    private commentModel: Model<CommentDocument>,
     protected saRepository: SaRepository,
   ) {}
 
@@ -17,7 +18,7 @@ export class CommentRepository {
   }
 
   async findById(id: string, userId: string) {
-    const result: Comment | null = await this.commentModel
+    const result: CommentMongo | null = await this.commentModel
       .findOne({ _id: id })
       .lean();
 

@@ -5,13 +5,13 @@ import { PostsRepository } from './posts.repository';
 import { BlogsRepository } from '../blogs/blogs.repository';
 import { CreateCommentDto } from '../comments/dto/create-comment.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { Comment, CommentDocument } from '../db/schemas/comments.schema';
+import { CommentMongo, CommentDocument } from '../db/schemas/comments.schema';
 import { Model } from 'mongoose';
 import { SaRepository } from '../sa/sa.repository';
 import { CommentRepository } from '../comments/comment.repository';
 import { CommentsQueryParamsDto } from './dto/comments-query-params.dto';
 import { LikesDto } from './dto/like-status.dto';
-import { Post, PostDocument } from '../db/schemas/posts.schema';
+import { PostMongo, PostDocument } from '../db/schemas/posts.schema';
 import { PostsQueryParamsDto } from './dto/posts-query-params.dto';
 
 @Injectable()
@@ -21,12 +21,15 @@ export class PostsService {
     protected saRepository: SaRepository,
     protected commentRepository: CommentRepository,
     protected blogsRepository: BlogsRepository,
-    @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
-    @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    @InjectModel(CommentMongo.name)
+    private commentModel: Model<CommentDocument>,
+    @InjectModel(PostMongo.name) private postModel: Model<PostDocument>,
   ) {}
 
   async create(createPostDto: CreatePostDto) {
-    const blogName = await this.blogsRepository.findById(createPostDto.blogId);
+    const blogName = await this.blogsRepository.findByIdSQL(
+      createPostDto.blogId,
+    );
     if (!blogName) {
       throw new NotFoundException('Blog not found');
     }

@@ -5,10 +5,10 @@ import { PostsService } from './posts.service';
 import { PostsRepository } from './posts.repository';
 import { CommentRepository } from '../comments/comment.repository';
 import { BlogsRepository } from '../blogs/blogs.repository';
-import { Comment, CommentSchema } from '../db/schemas/comments.schema';
-import { Post, PostSchema } from '../db/schemas/posts.schema';
+import { CommentMongo, CommentSchema } from '../db/schemas/comments.schema';
+import { PostMongo, PostSchema } from '../db/schemas/posts.schema';
 import { UserMongo, UserSchema } from '../db/schemas/users.schema';
-import { Blog, BlogSchema } from '../db/schemas/blogs.schema';
+import { BlogMongo, BlogSchema } from '../db/schemas/blogs.schema';
 import { BasicStrategy } from '../auth/strategies/basic.strategy';
 import { JwtBearerStrategy } from '../auth/strategies/jwt-bearer.strategy';
 import { LocalStrategy } from '../auth/strategies/local.strategy';
@@ -25,6 +25,8 @@ import { UserBanByBlogger } from '../auth/entities/user-ban-by-blogger.entity';
 import { UserEmailConfirmation } from '../auth/entities/user-email-confirmation.entity';
 import { UserPasswordRecovery } from '../auth/entities/user-password-recovery.entity';
 import { UserBanBySA } from '../auth/entities/user-ban-by-sa.entity';
+import { Blog } from '../blogs/entities/blog.entity';
+import { Post } from './entities/post.entity';
 
 const strategies = [
   BasicStrategy,
@@ -39,15 +41,17 @@ const entities = [
   UserPasswordRecovery,
   UserBanBySA,
   UserBanByBlogger,
+  Blog,
+  Post,
 ];
 
 @Module({
   imports: [
     MongooseModule.forFeature([
-      { name: Post.name, schema: PostSchema },
-      { name: Comment.name, schema: CommentSchema },
+      { name: PostMongo.name, schema: PostSchema },
+      { name: CommentMongo.name, schema: CommentSchema },
       { name: UserMongo.name, schema: UserSchema },
-      { name: Blog.name, schema: BlogSchema },
+      { name: BlogMongo.name, schema: BlogSchema },
     ]),
     AuthModule,
     CqrsModule,

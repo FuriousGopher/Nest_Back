@@ -1,10 +1,10 @@
 import { HydratedDocument } from 'mongoose';
 import { Prop, raw, Schema, SchemaFactory } from '@nestjs/mongoose';
 
-export type BlogDocument = HydratedDocument<Blog>;
+export type BlogDocument = HydratedDocument<BlogMongo>;
 
 @Schema()
-export class Blog {
+export class BlogMongo {
   @Prop()
   id: string;
   @Prop()
@@ -39,9 +39,9 @@ export class Blog {
   };
 }
 
-export const BlogSchema = SchemaFactory.createForClass(Blog);
+export const BlogSchema = SchemaFactory.createForClass(BlogMongo);
 
-BlogSchema.pre<Blog>('save', function (next) {
+BlogSchema.pre<BlogMongo>('save', function (next) {
   this.createdAt = new Date().toISOString();
   this.isMembership = false;
   this.banInfo.isBanned = false;
