@@ -17,6 +17,7 @@ import { AuthModule } from '../auth/auth.module';
 import { TokenParserMiddleware } from '../middlewares/token-parser.middleware';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../auth/entities/user.entity';
+import { Comment } from './entities/comment.entity';
 
 const strategies = [
   BasicStrategy,
@@ -24,6 +25,8 @@ const strategies = [
   LocalStrategy,
   JwtRefreshTokenStrategy,
 ];
+
+const entities = [User, Comment];
 @Module({
   imports: [
     PassportModule,
@@ -35,7 +38,7 @@ const strategies = [
       { name: CommentMongo.name, schema: CommentSchema },
     ]),
     AuthModule,
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([...entities]),
   ],
   controllers: [CommentsController],
   providers: [CommentsService, ...strategies, CommentRepository, ConfigService],

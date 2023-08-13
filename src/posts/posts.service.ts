@@ -74,10 +74,10 @@ export class PostsService {
   }
 
   findOneMapped(id: string, userId: string) {
-    return this.postsRepository.findOneWithMapping(id, userId);
+    return this.postsRepository.findOneWithMapping(id, +userId);
   }
 
-  updateOne(id: string, updatePostDto) {
+  updateOne(id: string, updatePostDto: UpdatePostDto) {
     return this.postsRepository.updateOne(id, updatePostDto);
   }
 

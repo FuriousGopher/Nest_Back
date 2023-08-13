@@ -27,7 +27,7 @@ export class Blog {
   @Column({ name: 'website_url', type: 'varchar' })
   websiteUrl: string;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
+  @CreateDateColumn({ name: 'createdAt', type: 'timestamp with time zone' })
   createdAt: Date;
 
   @Column({ name: 'is_membership', type: 'boolean', default: false })

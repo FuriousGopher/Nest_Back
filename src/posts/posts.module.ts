@@ -27,6 +27,7 @@ import { UserPasswordRecovery } from '../auth/entities/user-password-recovery.en
 import { UserBanBySA } from '../auth/entities/user-ban-by-sa.entity';
 import { Blog } from '../blogs/entities/blog.entity';
 import { Post } from './entities/post.entity';
+import { Comment } from '../comments/entities/comment.entity';
 
 const strategies = [
   BasicStrategy,
@@ -43,6 +44,7 @@ const entities = [
   UserBanByBlogger,
   Blog,
   Post,
+  Comment,
 ];
 
 @Module({

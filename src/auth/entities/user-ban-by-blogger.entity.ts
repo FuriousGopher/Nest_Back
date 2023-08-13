@@ -38,5 +38,5 @@ export class UserBanByBlogger {
     onDelete: 'CASCADE',
   })
   @JoinColumn()
-  blog: Blog;
+  blog: Blog | null;
 }

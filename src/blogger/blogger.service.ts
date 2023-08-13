@@ -49,7 +49,10 @@ export class BloggerService {
   }
 
   findAll(queryParams: BlogsQueryParamsDto, userId: string) {
-    return this.blogsRepository.findAllOwenBlogsPagination(queryParams, userId);
+    return this.blogsRepository.findAllOwenBlogsPagination(
+      queryParams,
+      +userId,
+    );
   }
 
   async findUser(userId: string) {
@@ -64,10 +67,6 @@ export class BloggerService {
     if (!banUserDto.isBanned) {
       return await this.blogsRepository.unBanUserForBlogs(userId, banUserDto);
     }
-  }
-
-  async findAllComments(userId: string, queryParams: PostsQueryParamsDto) {
-    return await this.postsRepository.findAllComments(userId, queryParams);
   }
 
   async checkOwnerShip(userId: string, blogId: string) {

@@ -13,11 +13,12 @@ import { BannedUsersQueryParamsDto } from '../blogger/dto/banned-users-query-par
 import { UserMongo, UserDocument } from '../db/schemas/users.schema';
 import { BanUserForBlogDto } from '../sa/dto/ban-user-for-blog.dto';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Blog } from './entities/blog.entity';
 import { Paginator } from '../utils/paginator';
 import { BlogBan } from './entities/blog-ban.entity';
 import { Post } from '../posts/entities/post.entity';
+import { UserQueryParamsDto } from '../sa/dto/userQueryParams.dto';
 
 @Injectable()
 export class BlogsRepository {
@@ -395,59 +396,38 @@ export class BlogsRepository {
     return result;
   }
 
-  async findAllOwenBlogsPagination(
-    queryParams: BlogsQueryParamsDto,
-    userId: string,
-  ) {
-    try {
-      const {
-        searchNameTerm = null,
-        sortBy = 'createdAt',
-        sortDirection = 'desc',
-        pageNumber = 1,
-        pageSize = 10,
-      } = queryParams;
+  async findAllOwenBlogsPagination(query: BlogsQueryParamsDto, userId: number) {
+    const blogs = await this.blogsRepository
+      .createQueryBuilder('b')
+      .where(`${query.searchNameTerm ? 'b.name ilike :nameTerm' : ''}`, {
+        nameTerm: `%${query.searchNameTerm}%`,
+      })
+      .andWhere(`u.id = :userId`, {
+        userId: userId,
+      })
+      .leftJoinAndSelect('b.user', 'u')
+      .orderBy(`b.${query.sortBy}`, query.sortDirection)
+      .skip((query.pageNumber - 1) * query.pageSize)
+      .take(query.pageSize)
+      .getMany();
 
-      const skipCount = (pageNumber - 1) * pageSize;
-      const filter: any = { 'blogOwnerInfo.userId': userId };
+    const totalCount = await this.blogsRepository
+      .createQueryBuilder('b')
+      .where(`${query.searchNameTerm ? 'b.name ilike :nameTerm' : ''}`, {
+        nameTerm: `%${query.searchNameTerm}%`,
+      })
+      .andWhere(`u.id = :userId`, {
+        userId: userId,
+      })
+      .leftJoinAndSelect('b.user', 'u')
+      .getCount();
 
-      if (searchNameTerm) {
-        filter['name'] = {
-          $regex: searchNameTerm,
-          $options: 'i',
-        };
-      }
-
-      const totalCount = await this.blogModel.countDocuments(filter).exec();
-      const totalPages = Math.ceil(totalCount / pageSize);
-
-      const blogs = await this.blogModel
-        .find(filter)
-        .sort({ [sortBy]: sortDirection === 'desc' ? -1 : 1 })
-        .skip(skipCount)
-        .limit(pageSize)
-        .exec();
-
-      const blogsViewModels = blogs.map((blog) => ({
-        id: blog._id.toString(),
-        name: blog.name,
-        description: blog.description,
-        websiteUrl: blog.websiteUrl,
-        createdAt: blog.createdAt,
-        isMembership: blog.isMembership,
-      }));
-
-      return {
-        pagesCount: totalPages,
-        page: +pageNumber,
-        pageSize: +pageSize,
-        totalCount: totalCount,
-        items: blogsViewModels,
-      };
-    } catch (e) {
-      console.error('An error occurred while getting all blogs', e);
-      return false;
-    }
+    return Paginator.paginate({
+      pageNumber: query.pageNumber,
+      pageSize: query.pageSize,
+      totalCount: totalCount,
+      items: await this.blogsMapping(blogs),
+    });
   }
 
   async save(newBlog: BlogDocument) {
@@ -477,72 +457,6 @@ export class BlogsRepository {
         'banInfo.banDate': new Date().toISOString(),
       },
     );
-  }
-
-  async findAllBannedUsersForBlog(
-    blogId: string,
-    queryParams: BannedUsersQueryParamsDto,
-  ) {
-    const {
-      searchLoginTerm = queryParams.searchLoginTerm || null,
-      sortBy = queryParams.sortBy || 'createdAt',
-      sortDirection = queryParams.sortDirection || 'desc',
-      pageNumber = queryParams.pageNumber || 1,
-      pageSize = queryParams.pageSize || 10,
-    } = queryParams;
-
-    const sortKeyMapping = {
-      login: 'accountData.login',
-      createdAt: 'createdAt',
-    };
-
-    const sortKey = sortKeyMapping[sortBy] || 'createdAt';
-
-    const skipCount = (pageNumber - 1) * pageSize;
-    const filter: any = {
-      banForBlogsInfo: {
-        $elemMatch: { blogIds: blogId, isBanned: true },
-      },
-    };
-
-    if (searchLoginTerm) {
-      filter.$or = [
-        {
-          'accountData.login': {
-            $regex: searchLoginTerm,
-            $options: 'i',
-          },
-        },
-      ];
-    }
-
-    const totalCount = await this.userModel.countDocuments(filter).exec();
-    const totalPages = Math.ceil(totalCount / pageSize);
-
-    const users = await this.userModel
-      .find(filter)
-      .sort({ [sortKey]: sortDirection === 'desc' ? -1 : 1 })
-      .skip(skipCount)
-      .limit(pageSize)
-      .exec();
-
-    const bannedUsersViewModels = users.map((user) => ({
-      id: user._id.toString(),
-      login: user.accountData.login,
-      banInfo: {
-        isBanned: user.banForBlogsInfo[0].isBanned,
-        banDate: user.banForBlogsInfo[0].banDate,
-        banReason: user.banForBlogsInfo[0].banReason,
-      },
-    }));
-
-    return {
-      pagesCount: totalPages,
-      page: +pageNumber,
-      pageSize: +pageSize,
-      totalCount: totalCount,
-      items: bannedUsersViewModels,
-    };
   }
 
   async banUserForBlogs(banUserDto: BanUserForBlogDto, userId: string) {
@@ -602,7 +516,21 @@ export class BlogsRepository {
     return this.dataSource.manager.save(entity);
   }
 
-  async findAllBlogsSQl(query: BlogsQueryParamsDto) {
+  async queryRunnerSave(
+    entity: Blog | BlogBan,
+    queryRunnerManager: EntityManager,
+  ): Promise<Blog | BlogBan> {
+    return queryRunnerManager.save(entity);
+  }
+
+  async findAllBlogsSQl(queryParams: BlogsQueryParamsDto) {
+    const query: BlogsQueryParamsDto = {
+      pageSize: Number(queryParams.pageSize) || 10,
+      pageNumber: Number(queryParams.pageNumber) || 1,
+      sortBy: queryParams.sortBy ?? 'createdAt',
+      sortDirection: queryParams.sortDirection ?? 'DESC',
+      searchNameTerm: queryParams.searchNameTerm ?? '',
+    };
     const blogs = await this.blogsRepository
       .createQueryBuilder('b')
       .where(`${query.searchNameTerm ? 'b.name ilike :nameTerm' : ''}`, {
@@ -643,5 +571,28 @@ export class BlogsRepository {
         isMembership: b.isMembership,
       };
     });
+  }
+
+  async findBlogWithOwner(blogId: string) {
+    try {
+      return await this.blogsRepository
+        .createQueryBuilder('b')
+        .where(`b.id = :blogId`, { blogId: blogId })
+        .leftJoinAndSelect('b.user', 'u')
+        .getOne();
+    } catch (e) {
+      console.log(e);
+      return null;
+    }
+  }
+
+  async deleteBlog(blogId: number): Promise<boolean> {
+    const result = await this.blogsRepository
+      .createQueryBuilder('b')
+      .delete()
+      .from(Blog)
+      .where('id = :blogId', { blogId: blogId })
+      .execute();
+    return result.affected === 1;
   }
 }

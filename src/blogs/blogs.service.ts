@@ -95,18 +95,4 @@ export class BlogsService {
     }
     return findBlog.blogOwnerInfo.userId === userId;
   }
-
-  async findAllBannedUsersForBlog(
-    id: string,
-    queryParams: BannedUsersQueryParamsDto,
-  ) {
-    const findBlog = await this.blogsRepository.findOne(id);
-    if (!findBlog) {
-      return false;
-    }
-    return this.blogsRepository.findAllBannedUsersForBlog(
-      findBlog._id.toString(),
-      queryParams,
-    );
-  }
 }

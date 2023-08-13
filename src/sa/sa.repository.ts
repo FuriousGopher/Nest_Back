@@ -11,6 +11,7 @@ import { UserBanByBlogger } from '../auth/entities/user-ban-by-blogger.entity';
 import { UserEmailConfirmation } from '../auth/entities/user-email-confirmation.entity';
 import { UserPasswordRecovery } from '../auth/entities/user-password-recovery.entity';
 import { Paginator } from '../utils/paginator';
+import { BannedUsersQueryParamsDto } from '../blogger/dto/banned-users-query-params.dto';
 
 @Injectable()
 export class SaRepository {
@@ -478,5 +479,73 @@ export class SaRepository {
       })
       .leftJoinAndSelect('u.userBanBySA', 'ubsa')
       .getOne();
+  }
+
+  async findUsersBannedByBlogger(
+    query: BannedUsersQueryParamsDto,
+    blogId: number,
+  ) {
+    const users = await this.usersRepository
+      .createQueryBuilder('u')
+      .where(`${query.searchLoginTerm ? 'u.login ilike :loginTerm' : ''}`, {
+        loginTerm: `%${query.searchLoginTerm}%`,
+      })
+      .andWhere(`ubb.isBanned = true`)
+      .andWhere(`b.id = :blogId`, {
+        blogId: blogId,
+      })
+      .leftJoinAndSelect('u.userBanByBlogger', 'ubb')
+      .leftJoinAndSelect('ubb.blog', 'b')
+      .orderBy(`u.${query.sortBy}`, query.sortDirection)
+      .skip((query.pageNumber - 1) * query.pageSize)
+      .take(query.pageSize)
+      .getMany();
+
+    const totalCount = await this.usersRepository
+      .createQueryBuilder('u')
+      .where(`${query.searchLoginTerm ? 'u.login ilike :loginTerm' : ''}`, {
+        loginTerm: `%${query.searchLoginTerm}%`,
+      })
+      .andWhere(`ubb.isBanned = true`)
+      .andWhere(`b.id = :blogId`, {
+        blogId: blogId,
+      })
+      .leftJoinAndSelect('u.userBanByBlogger', 'ubb')
+      .leftJoinAndSelect('ubb.blog', 'b')
+      .getCount();
+
+    return Paginator.paginate({
+      pageNumber: query.pageNumber,
+      pageSize: query.pageSize,
+      totalCount: totalCount,
+      items: await this.usersBannedByBloggerMapping(users),
+    });
+  }
+
+  private async usersBannedByBloggerMapping(array: User[]) {
+    return array.map((u) => {
+      return {
+        id: u.id.toString(),
+        login: u.login,
+        banInfo: {
+          isBanned: u.userBanByBlogger!.isBanned,
+          banDate: u.userBanByBlogger!.banDate,
+          banReason: u.userBanByBlogger!.banReason,
+        },
+      };
+    });
+  }
+
+  async findUserForBanByBlogger(userId: string | number) {
+    try {
+      return await this.usersRepository
+        .createQueryBuilder('u')
+        .where(`u.id = :userId`, { userId: userId })
+        .leftJoinAndSelect('u.userBanByBlogger', 'ubb')
+        .getOne();
+    } catch (e) {
+      console.log(e);
+      return null;
+    }
   }
 }

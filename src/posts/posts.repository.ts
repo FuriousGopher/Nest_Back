@@ -13,6 +13,7 @@ import { Post } from './entities/post.entity';
 import { DataSource, Repository } from 'typeorm';
 import { PostLike } from './entities/post-like.entity';
 import { LikeStatus } from '../enums/like-status.enum';
+import { CommentLike } from '../comments/entities/comment-like.entity';
 
 @Injectable()
 export class PostsRepository {
@@ -70,6 +71,10 @@ export class PostsRepository {
 
       throw e;
     }
+  }
+
+  async dataSourceSave(entity: Post | PostLike) {
+    return this.dataSource.manager.save(entity);
   }
 
   async mapGetAllPosts(array: PostDocument[], userId?: string) {
@@ -245,106 +250,83 @@ export class PostsRepository {
       .exec();
   }
 
-  async findOneWithMapping(id: string, userId: string) {
+  async findOneWithMapping(postId: string, userId: number) {
     try {
-      const post = await this.postModel.findById(id);
-      if (!post) {
-        return false;
-      }
-      const findBlog = await this.blogModel.findById(post.blogId);
-      if (findBlog!.banInfo.isBanned === true) {
-        return false;
-      }
-      const mappedPost = await this.mapGetAllPosts([post], userId);
-      return mappedPost[0];
+      const posts = await this.postsRepository
+        .createQueryBuilder('p')
+        .addSelect(
+          (qb) =>
+            qb
+              .select(`count(*)`)
+              .from(PostLike, 'pl')
+              .leftJoin('pl.user', 'u')
+              .leftJoin('u.userBanBySA', 'ubsa')
+              .where('pl.postId = p.id')
+              .andWhere('ubsa.isBanned = false')
+              .andWhere(`pl.likeStatus = 'Like'`),
+          'likes_count',
+        )
+        .addSelect(
+          (qb) =>
+            qb
+              .select(`count(*)`)
+              .from(PostLike, 'pl')
+              .leftJoin('pl.user', 'u')
+              .leftJoin('u.userBanBySA', 'ubsa')
+              .where('pl.postId = p.id')
+              .andWhere('ubsa.isBanned = false')
+              .andWhere(`pl.likeStatus = 'Dislike'`),
+          'dislikes_count',
+        )
+        .addSelect(
+          (qb) =>
+            qb
+              .select('pl.likeStatus')
+              .from(PostLike, 'pl')
+              .where('pl.postId = p.id')
+              .andWhere('pl.userId = :userId', { userId: userId }),
+          'like_status',
+        )
+        .addSelect(
+          (qb) =>
+            qb
+              .select(
+                `jsonb_agg(json_build_object('addedAt', to_char(
+            agg.added_at::timestamp at time zone 'UTC',
+            'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), 'userId', cast(agg.id as varchar), 'login', agg.login)
+                 )`,
+              )
+              .from((qb) => {
+                return qb
+                  .select(`added_at, u.id, u.login`)
+                  .from(PostLike, 'pl')
+                  .leftJoin('pl.user', 'u')
+                  .leftJoin('u.userBanBySA', 'ubsa')
+                  .where('pl.postId = p.id')
+                  .andWhere(`pl.like_status = 'Like'`)
+                  .andWhere('ubsa.isBanned = false')
+                  .orderBy('added_at', 'DESC')
+                  .limit(3);
+              }, 'agg'),
+
+          'newest_likes',
+        )
+        .where(`p.id = :postId`, {
+          postId: postId,
+        })
+        .andWhere(`bb.isBanned = false`)
+        .andWhere(`ubsa.isBanned = false`)
+        .leftJoinAndSelect('p.blog', 'b')
+        .leftJoinAndSelect('b.blogBan', 'bb')
+        .leftJoinAndSelect('b.user', 'u')
+        .leftJoinAndSelect('u.userBanBySA', 'ubsa')
+        .getRawMany();
+
+      const mappedPosts = await this.postsMapping(posts);
+      return mappedPosts[0];
     } catch (e) {
-      console.error('An error occurred while getting post ', e);
-      return false;
-    }
-  }
-
-  async findAllComments(userId: string, queryParams: PostsQueryParamsDto) {
-    try {
-      const {
-        sortBy = 'createdAt',
-        sortDirection = 'desc',
-        pageNumber = 1,
-        pageSize = 10,
-      } = queryParams;
-
-      const filter: any = {};
-
-      const findAllBlogs = await this.blogModel
-        .find({ 'blogOwnerInfo.userId': userId })
-        .exec();
-
-      const blogIds = findAllBlogs.map((blog) => blog._id.toString());
-
-      const findPosts = await this.postModel
-        .find({ blogId: { $in: blogIds } })
-        .exec();
-
-      const postIds = findPosts.map((post) => post._id.toString());
-
-      const totalCount = await this.commentModel
-        .countDocuments({ postId: { $in: postIds } })
-        .exec();
-
-      const totalPages = Math.ceil(totalCount / pageSize);
-
-      const skipCount = (pageNumber - 1) * pageSize;
-
-      const comments = await this.commentModel
-        .find({ postId: { $in: postIds } })
-        .sort({ [sortBy]: sortDirection === 'desc' ? -1 : 1 })
-        .skip(skipCount)
-        .limit(pageSize)
-        .exec();
-
-      const commentViewModels = await Promise.all(
-        comments.map(async (comment) => {
-          const post = await this.postModel.findById(comment.postId).exec();
-          const blog = await this.blogModel.findById(post!.blogId).exec();
-
-          const likeStatus =
-            comment.likesInfo.users.find(
-              (userLike) => userLike.userId === userId,
-            )?.likeStatus || 'None';
-
-          return {
-            id: comment._id.toString(),
-            content: comment.content,
-            commentatorInfo: {
-              userId: comment.commentatorInfo.userId,
-              userLogin: comment.commentatorInfo.userLogin,
-            },
-            createdAt: comment.createdAt,
-            likesInfo: {
-              likesCount: comment.likesInfo.likesCount,
-              dislikesCount: comment.likesInfo.dislikesCount,
-              myStatus: likeStatus,
-            },
-            postInfo: {
-              id: comment.postId,
-              title: post ? post.title : '',
-              blogId: post ? post.blogId : '',
-              blogName: blog ? blog.name : '',
-            },
-          };
-        }),
-      );
-
-      return {
-        pagesCount: totalPages,
-        page: +pageNumber,
-        pageSize: +pageSize,
-        totalCount: totalCount,
-        items: commentViewModels,
-      };
-    } catch (e) {
-      console.error('An error occurred while getting all comments', e);
-
-      throw e;
+      console.log(e);
+      return null;
     }
   }
 
@@ -470,5 +452,29 @@ export class PostsRepository {
         },
       };
     });
+  }
+
+  async findPostSQL(postId: string): Promise<Post | null> {
+    try {
+      return await this.postsRepository
+        .createQueryBuilder('p')
+        .where(`p.id = :postId`, {
+          postId: postId,
+        })
+        .getOne();
+    } catch (e) {
+      console.log(e);
+      return null;
+    }
+  }
+
+  async deletePostSQL(postId: number): Promise<boolean> {
+    const result = await this.postsRepository
+      .createQueryBuilder('p')
+      .delete()
+      .from(Post)
+      .where('id = :postId', { postId: postId })
+      .execute();
+    return result.affected === 1;
   }
 }

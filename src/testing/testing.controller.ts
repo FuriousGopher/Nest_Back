@@ -9,8 +9,8 @@ export class TestingController {
   @HttpCode(204)
   @Delete()
   remove() {
-    return true; /*this.dataSource.query(
+    return this.dataSource.query(
       `TRUNCATE users, blogs, comments, posts, devices CASCADE;`,
-    );*/ //TODO uncomment this
+    );
   }
 }

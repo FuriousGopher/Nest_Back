@@ -2,8 +2,8 @@ import { IsOptional } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class BlogsQueryParamsDto {
-  searchNameTerm = '';
-  sortBy = 'createdAt';
+  searchNameTerm: string | null;
+  sortBy: string;
 
   @IsOptional()
   @Transform(({ value }) => {
@@ -18,6 +18,6 @@ export class BlogsQueryParamsDto {
   })
   sortDirection: any;
 
-  pageNumber = 1;
-  pageSize = 10;
+  pageNumber: number;
+  pageSize: number;
 }

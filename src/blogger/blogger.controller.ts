@@ -24,8 +24,17 @@ import { UpdateBlogDto } from '../blogs/dto/update-blog.dto';
 import { PostsService } from '../posts/posts.service';
 import { UpdatePostByBloggerDto } from './dto/update-post-by-blogger.dto';
 import { BannedUsersQueryParamsDto } from './dto/banned-users-query-params.dto';
-import { BanUserDto } from '../sa/dto/ban-user.dto';
 import { BanUserForBlogDto } from '../sa/dto/ban-user-for-blog.dto';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { BlogCreateCommand } from './use-cases/blog-create.use-case';
+import { BlogUpdateCommand } from './use-cases/blog-update.use-case';
+import { BlogDeleteCommand } from './use-cases/blog-delete.use-case';
+import { PostCreateCommand } from './use-cases/post-create.use-case';
+import { PostUpdateCommand } from './use-cases/post-update.use-case';
+import { PostDeleteCommand } from './use-cases/post-delete.use-case';
+import { CommentRepository } from '../comments/comment.repository';
+import { UsersGetBannedQuery } from './use-cases/users-get-banned.use-case';
+import { BloggerBanUserCommand } from './use-cases/user-ban.use-case';
 
 @UseGuards(JwtBearerGuard)
 @Controller('blogger')
@@ -34,6 +43,9 @@ export class BloggerController {
     private readonly bloggerService: BloggerService,
     private readonly blogsService: BlogsService,
     private readonly postsService: PostsService,
+    private commandBus: CommandBus,
+    private queryBus: QueryBus,
+    private readonly commentRepository: CommentRepository,
   ) {}
 
   @Get('blogs')
@@ -83,9 +95,9 @@ export class BloggerController {
     @Query() queryParams: PostsQueryParamsDto,
     @UserIdFromHeaders() userId: string,
   ) {
-    const result = await this.bloggerService.findAllComments(
-      userId,
+    const result = await this.commentRepository.findAllCommentsSQL(
       queryParams,
+      +userId,
     );
     if (!result) {
       return exceptionHandler(ResultCode.NotFound, 'Comments not found', 'id');
@@ -98,15 +110,15 @@ export class BloggerController {
     @Body() createBlogDto: CreateBlogDto,
     @UserIdFromHeaders() userId: string,
   ) {
-    const result = await this.bloggerService.create(createBlogDto, userId);
+    const result = await this.commandBus.execute(
+      new BlogCreateCommand(createBlogDto, +userId),
+    );
+
     if (!result) {
-      return exceptionHandler(
-        ResultCode.BadRequest,
-        'Blog not created',
-        'name',
-      );
+      return exceptionHandler(ResultCode.NotFound, 'User not found', 'id');
     }
-    return result;
+
+    return this.blogsService.findById(result);
   }
 
   @Post('blogs/:id/posts')
@@ -115,55 +127,33 @@ export class BloggerController {
     @Param('id') id: string,
     @UserIdFromHeaders() userId: string,
   ) {
-    const findBlog = await this.blogsService.findOne(id);
-    if (!findBlog) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'Blog with this id not found',
-        'id',
-      );
-    }
-    const checkOwner = await this.blogsService.checkOwner(userId, id);
+    const result = await this.commandBus.execute(
+      new PostCreateCommand(createPostDto, id, +userId),
+    );
 
-    if (!checkOwner) {
-      return exceptionHandler(
-        ResultCode.Forbidden,
-        `Blog with ${id} not yours`,
-        'id',
-      );
+    if (result.code !== ResultCode.Success) {
+      return exceptionHandler(result.code, result.message, result.field);
     }
 
-    return await this.blogsService.createPostByBlogId(createPostDto, id);
+    return this.postsService.findOneMapped(result.response, userId);
   }
 
   @HttpCode(204)
   @Put('blogs/:id')
   async updateBlog(
-    @Param('id') id: string,
+    @Param('id') blogId: string,
     @Body() updateBlogDto: UpdateBlogDto,
     @UserIdFromHeaders() userId: string,
   ) {
-    const findBlog = await this.blogsService.findOne(id);
+    const result = await this.commandBus.execute(
+      new BlogUpdateCommand(updateBlogDto, blogId, +userId),
+    );
 
-    if (!findBlog) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'Blog with this id not found',
-        'id',
-      );
+    if (result.code !== ResultCode.Success) {
+      return exceptionHandler(result.code, result.message, result.field);
     }
 
-    const checkOwner = await this.blogsService.checkOwner(userId, id);
-
-    if (!checkOwner) {
-      return exceptionHandler(
-        ResultCode.Forbidden,
-        `Blog with ${id} not yours`,
-        'id',
-      );
-    }
-
-    return await this.blogsService.updateOne(id, updateBlogDto);
+    return result;
   }
 
   @HttpCode(204)
@@ -174,36 +164,15 @@ export class BloggerController {
     @Body() updatePostDto: UpdatePostByBloggerDto,
     @UserIdFromHeaders() userId: string,
   ) {
-    const findPost = await this.postsService.findOne(postId);
-    if (!findPost) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'Post with this id not found',
-        'id',
-      );
+    const result = await this.commandBus.execute(
+      new PostUpdateCommand(updatePostDto, blogId, postId, +userId),
+    );
+
+    if (result.code !== ResultCode.Success) {
+      return exceptionHandler(result.code, result.message, result.field);
     }
 
-    const checkBlogId = await this.blogsService.findOne(blogId);
-
-    if (!checkBlogId) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'Blog with this id not found',
-        'id',
-      );
-    }
-
-    const checkOwner = await this.blogsService.checkOwner(userId, blogId);
-
-    if (!checkOwner) {
-      return exceptionHandler(
-        ResultCode.Forbidden,
-        `Blog with ${blogId} not yours `,
-        'id',
-      );
-    }
-
-    return await this.postsService.updateOne(postId, updatePostDto);
+    return result;
   }
 
   @HttpCode(204)
@@ -212,27 +181,15 @@ export class BloggerController {
     @Param('id') id: string,
     @UserIdFromHeaders() userId: string,
   ) {
-    const findBlog = await this.blogsService.findOne(id);
+    const result = await this.commandBus.execute(
+      new BlogDeleteCommand(id, +userId),
+    );
 
-    if (!findBlog) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'Blog with this id not found',
-        'id',
-      );
+    if (result.code !== ResultCode.Success) {
+      return exceptionHandler(result.code, result.message, result.field);
     }
 
-    const checkOwner = await this.blogsService.checkOwner(userId, id);
-
-    if (!checkOwner) {
-      return exceptionHandler(
-        ResultCode.Forbidden,
-        `Blog with ${id} not yours`,
-        'id',
-      );
-    }
-
-    return this.blogsService.remove(id);
+    return result;
   }
 
   @HttpCode(204)
@@ -242,37 +199,15 @@ export class BloggerController {
     @Param('postId') postId: string,
     @UserIdFromHeaders() userId: string,
   ) {
-    const findPost = await this.postsService.findOne(postId);
+    const result = await this.commandBus.execute(
+      new PostDeleteCommand(blogId, postId, +userId),
+    );
 
-    if (!findPost) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'Post with this id not found',
-        'id',
-      );
+    if (result.code !== ResultCode.Success) {
+      return exceptionHandler(result.code, result.message, result.field);
     }
 
-    const checkBlogId = await this.blogsService.findOne(blogId);
-
-    if (!checkBlogId) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'Blog with this id not found',
-        'id',
-      );
-    }
-
-    const checkOwner = await this.blogsService.checkOwner(userId, blogId);
-
-    if (!checkOwner) {
-      return exceptionHandler(
-        ResultCode.Forbidden,
-        `Post with ${postId} not yours`,
-        'id',
-      );
-    }
-
-    return await this.postsService.remove(postId);
+    return result;
   }
 
   ////Users
@@ -283,34 +218,15 @@ export class BloggerController {
     @Query() queryParams: BannedUsersQueryParamsDto,
     @UserIdFromHeaders() userId: string,
   ) {
-    const findBlog = await this.blogsService.findOne(id);
-    if (!findBlog) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'Blog with this id not found',
-        'id',
-      );
-    }
-    const checkOwner = await this.bloggerService.checkOwnerShip(userId, id);
-    if (!checkOwner) {
-      return exceptionHandler(
-        ResultCode.Forbidden,
-        `Blog with ${id} not yours`,
-        'id',
-      );
-    }
-    const result = await this.blogsService.findAllBannedUsersForBlog(
-      id,
-      queryParams,
+    const result = await this.queryBus.execute(
+      new UsersGetBannedQuery(queryParams, id, +userId),
     );
-    if (!result) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'Blog with this id not found',
-        'id',
-      );
+
+    if (result.code !== ResultCode.Success) {
+      return exceptionHandler(result.code, result.message, result.field);
     }
-    return result;
+
+    return result.response;
   }
 
   @HttpCode(204)
@@ -320,38 +236,14 @@ export class BloggerController {
     @UserIdFromHeaders() bloggerId: string,
     @Body() banUserDto: BanUserForBlogDto,
   ) {
-    const findUser = await this.bloggerService.findUser(userId);
-    if (!findUser) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'User with this id not found',
-        'id',
-      );
+    const result = await this.commandBus.execute(
+      new BloggerBanUserCommand(banUserDto, userId, +bloggerId),
+    );
+
+    if (result.code !== ResultCode.Success) {
+      return exceptionHandler(result.code, result.message, result.field);
     }
 
-    const checkOwner = await this.bloggerService.checkOwnerShip(
-      bloggerId,
-      banUserDto.blogId,
-    );
-    if (!checkOwner) {
-      return exceptionHandler(
-        ResultCode.Forbidden,
-        `Blog with ${banUserDto.blogId} not yours`,
-        'id',
-      );
-    }
-
-    const result = await this.bloggerService.changeBanStatusOfUser(
-      banUserDto,
-      userId,
-    );
-    if (!result) {
-      return exceptionHandler(
-        ResultCode.BadRequest,
-        'Something went wrong',
-        'userId',
-      );
-    }
     return result;
   }
 }

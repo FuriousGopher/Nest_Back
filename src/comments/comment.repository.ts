@@ -4,6 +4,13 @@ import { CommentMongo, CommentDocument } from '../db/schemas/comments.schema';
 import { Model, Types } from 'mongoose';
 import { CommentsQueryParamsDto } from '../posts/dto/comments-query-params.dto';
 import { SaRepository } from '../sa/sa.repository';
+import { PostsQueryParamsDto } from '../posts/dto/posts-query-params.dto';
+import { CommentLike } from './entities/comment-like.entity';
+import { Paginator } from '../utils/paginator';
+import { LikeStatus } from '../enums/like-status.enum';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Comment } from './entities/comment.entity';
 
 @Injectable()
 export class CommentRepository {
@@ -11,6 +18,7 @@ export class CommentRepository {
     @InjectModel(CommentMongo.name)
     private commentModel: Model<CommentDocument>,
     protected saRepository: SaRepository,
+    @InjectRepository(Comment) private commentsRepository: Repository<Comment>,
   ) {}
 
   async save(newComment: CommentDocument) {
@@ -205,5 +213,105 @@ export class CommentRepository {
       { $set: { content } },
     );
     return result.matchedCount === 1;
+  }
+
+  async findAllCommentsSQL(query: PostsQueryParamsDto, userId: number) {
+    try {
+      const comments = await this.commentsRepository
+        .createQueryBuilder('c')
+        .addSelect(
+          (qb) =>
+            qb
+              .select(`count(*)`)
+              .from(CommentLike, 'cl')
+              .leftJoin('cl.user', 'u')
+              .leftJoin('u.userBanBySA', 'ubsa')
+              .where('cl.commentId = c.id')
+              .andWhere('ubsa.isBanned = false')
+              .andWhere(`cl.likeStatus = 'Like'`),
+          'likes_count',
+        )
+        .addSelect(
+          (qb) =>
+            qb
+              .select(`count(*)`)
+              .from(CommentLike, 'cl')
+              .leftJoin('cl.user', 'u')
+              .leftJoin('u.userBanBySA', 'ubsa')
+              .where('cl.commentId = c.id')
+              .andWhere('ubsa.isBanned = false')
+              .andWhere(`cl.likeStatus = 'Dislike'`),
+          'dislikes_count',
+        )
+        .addSelect(
+          (qb) =>
+            qb
+              .select('cl.likeStatus')
+              .from(CommentLike, 'cl')
+              .where('cl.commentId = c.id')
+              .andWhere('cl.userId = :userId', { userId: userId }),
+          'like_status',
+        )
+        .where(`bu.id = :userId`, {
+          userId: userId,
+        })
+        .andWhere(`ubsa.isBanned = false`)
+        .leftJoinAndSelect('c.post', 'p')
+        .leftJoinAndSelect('c.user', 'u')
+        .leftJoinAndSelect('p.blog', 'b')
+        .leftJoinAndSelect('b.user', 'bu')
+        .leftJoinAndSelect('bu.userBanBySA', 'ubsa')
+        .orderBy(`c.${query.sortBy}`, query.sortDirection)
+        .limit(query.pageSize)
+        .offset((query.pageNumber - 1) * query.pageSize)
+        .getRawMany();
+
+      const totalCount = await this.commentsRepository
+        .createQueryBuilder('c')
+        .where(`u.id = :userId`, {
+          userId: userId,
+        })
+        .andWhere(`ubsa.isBanned = false`)
+        .leftJoinAndSelect('c.post', 'p')
+        .leftJoinAndSelect('p.blog', 'b')
+        .leftJoinAndSelect('b.user', 'u')
+        .leftJoinAndSelect('u.userBanBySA', 'ubsa')
+        .getCount();
+
+      return Paginator.paginate({
+        pageNumber: query.pageNumber,
+        pageSize: query.pageSize,
+        totalCount: totalCount,
+        items: await this.commentsOfBloggerMapping(comments),
+      });
+    } catch (e) {
+      console.log(e);
+      return null;
+    }
+  }
+
+  private async commentsOfBloggerMapping(comments: any[]) {
+    return comments.map((c) => {
+      return {
+        id: c.c_id.toString(),
+        content: c.c_content,
+        createdAt: c.c_created_at,
+        commentatorInfo: {
+          userId: c.u_id.toString(),
+          userLogin: c.u_login,
+        },
+        likesInfo: {
+          likesCount: Number(c.likes_count),
+          dislikesCount: Number(c.dislikes_count),
+          myStatus: c.like_status || LikeStatus.None,
+        },
+        postInfo: {
+          blogId: c.b_id.toString(),
+          blogName: c.b_name,
+          id: c.p_id.toString(),
+          title: c.p_title,
+        },
+      };
+    });
   }
 }
