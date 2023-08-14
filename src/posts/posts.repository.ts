@@ -250,7 +250,7 @@ export class PostsRepository {
       .exec();
   }
 
-  async findOneWithMapping(postId: string, userId: number) {
+  async findOneWithMapping(postId: number, userId: number) {
     try {
       const posts = await this.postsRepository
         .createQueryBuilder('p')
@@ -321,6 +321,7 @@ export class PostsRepository {
         .leftJoinAndSelect('b.user', 'u')
         .leftJoinAndSelect('u.userBanBySA', 'ubsa')
         .getRawMany();
+      console.log(posts);
 
       const mappedPosts = await this.postsMapping(posts);
       return mappedPosts[0];
@@ -441,20 +442,20 @@ export class PostsRepository {
         title: p.p_title,
         shortDescription: p.p_short_description,
         content: p.p_content,
-        blogId: p.b_id.toString(),
+        blogId: p.p_blogId.toString(),
         blogName: p.b_name,
         createdAt: p.p_created_at,
         extendedLikesInfo: {
-          likesCount: Number(p.likes_count),
-          dislikesCount: Number(p.dislikes_count),
-          myStatus: p.like_status || LikeStatus.None,
-          newestLikes: p.newest_likes || [],
+          likesCount: 0,
+          dislikesCount: 0,
+          myStatus: p.likeStatus || LikeStatus.None,
+          newestLikes: p.newestLikes || [],
         },
       };
     });
   }
 
-  async findPostSQL(postId: string): Promise<Post | null> {
+  async findPostSQL(postId: number): Promise<Post | null> {
     try {
       return await this.postsRepository
         .createQueryBuilder('p')

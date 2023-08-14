@@ -18,7 +18,7 @@ export class Blog {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', width: 15 })
+  @Column({ type: 'varchar', width: 15, collation: 'C' })
   name: string;
 
   @Column({ type: 'varchar', width: 500 })
@@ -27,7 +27,7 @@ export class Blog {
   @Column({ name: 'website_url', type: 'varchar' })
   websiteUrl: string;
 
-  @CreateDateColumn({ name: 'createdAt', type: 'timestamp with time zone' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
   createdAt: Date;
 
   @Column({ name: 'is_membership', type: 'boolean', default: false })

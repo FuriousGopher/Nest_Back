@@ -335,7 +335,15 @@ export class BlogsRepository {
     };
   }
 
-  async findBlogsForSASQL(query: BlogsQueryParamsDto) {
+  async findBlogsForSASQL(queryParams: BlogsQueryParamsDto) {
+    const query: BlogsQueryParamsDto = {
+      searchNameTerm: queryParams.searchNameTerm ?? null,
+      sortBy: queryParams.sortBy ?? 'createdAt',
+      sortDirection: queryParams.sortDirection ?? 'DESC',
+      pageNumber: Number(queryParams.pageNumber) || 1,
+      pageSize: Number(queryParams.pageSize) || 10,
+    };
+
     const blogs = await this.blogsRepository
       .createQueryBuilder('b')
       .where(`${query.searchNameTerm ? 'b.name ilike :nameTerm' : ''}`, {
@@ -396,7 +404,18 @@ export class BlogsRepository {
     return result;
   }
 
-  async findAllOwenBlogsPagination(query: BlogsQueryParamsDto, userId: number) {
+  async findAllOwenBlogsPagination(
+    queryParams: BlogsQueryParamsDto,
+    userId: number,
+  ) {
+    const query: BlogsQueryParamsDto = {
+      pageSize: Number(queryParams.pageSize) || 10,
+      pageNumber: Number(queryParams.pageNumber) || 1,
+      sortBy: queryParams.sortBy ?? 'createdAt',
+      sortDirection: queryParams.sortDirection ?? 'DESC',
+      searchNameTerm: queryParams.searchNameTerm ?? '',
+    };
+
     const blogs = await this.blogsRepository
       .createQueryBuilder('b')
       .where(`${query.searchNameTerm ? 'b.name ilike :nameTerm' : ''}`, {
@@ -573,7 +592,7 @@ export class BlogsRepository {
     });
   }
 
-  async findBlogWithOwner(blogId: string) {
+  async findBlogWithOwner(blogId: number) {
     try {
       return await this.blogsRepository
         .createQueryBuilder('b')

@@ -18,7 +18,7 @@ export class BlogUpdateUseCase implements ICommandHandler<BlogUpdateCommand> {
   async execute(
     command: BlogUpdateCommand,
   ): Promise<ExceptionResultType<boolean>> {
-    const blog = await this.blogsRepository.findBlogWithOwner(command.blogId);
+    const blog = await this.blogsRepository.findBlogWithOwner(+command.blogId);
 
     if (!blog) {
       return {

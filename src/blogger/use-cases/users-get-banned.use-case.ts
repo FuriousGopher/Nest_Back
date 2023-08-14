@@ -22,7 +22,7 @@ export class UsersGetBannedUseCase
   ) {}
 
   async execute(query: UsersGetBannedQuery) {
-    const blog = await this.blogsRepository.findBlogWithOwner(query.blogId);
+    const blog = await this.blogsRepository.findBlogWithOwner(+query.blogId);
 
     if (!blog) {
       return {

@@ -482,9 +482,17 @@ export class SaRepository {
   }
 
   async findUsersBannedByBlogger(
-    query: BannedUsersQueryParamsDto,
+    queryParams: BannedUsersQueryParamsDto,
     blogId: number,
   ) {
+    const query: BannedUsersQueryParamsDto = {
+      pageSize: Number(queryParams.pageSize) || 10,
+      pageNumber: Number(queryParams.pageNumber) || 1,
+      sortBy: queryParams.sortBy ?? 'createdAt',
+      sortDirection: queryParams.sortDirection ?? 'DESC',
+      searchLoginTerm: queryParams.searchLoginTerm ?? null,
+    };
+
     const users = await this.usersRepository
       .createQueryBuilder('u')
       .where(`${query.searchLoginTerm ? 'u.login ilike :loginTerm' : ''}`, {

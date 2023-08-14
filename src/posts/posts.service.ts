@@ -73,8 +73,8 @@ export class PostsService {
     return await this.postsRepository.findAllPosts(queryParams, userId);
   }
 
-  findOneMapped(id: string, userId: string) {
-    return this.postsRepository.findOneWithMapping(id, +userId);
+  findOneMapped(postId: number, userId: string) {
+    return this.postsRepository.findOneWithMapping(postId, +userId);
   }
 
   updateOne(id: string, updatePostDto: UpdatePostDto) {

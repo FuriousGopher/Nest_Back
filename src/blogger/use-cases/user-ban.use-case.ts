@@ -36,7 +36,7 @@ export class BloggerBanUserUseCase
     }
 
     const blog = await this.blogsRepository.findBlogWithOwner(
-      command.banUserDto.blogId,
+      +command.banUserDto.blogId,
     );
 
     if (!blog) {

@@ -55,7 +55,7 @@ export class PostsController {
 
   @Get(':id')
   async findOne(@Param('id') id: string, @UserIdFromHeaders() userId: any) {
-    const resultFindOne = await this.postsService.findOneMapped(id, userId);
+    const resultFindOne = await this.postsService.findOneMapped(+id, userId);
     if (!resultFindOne) {
       return exceptionHandler(
         ResultCode.NotFound,

@@ -26,7 +26,7 @@ export class PostDeleteUseCase implements ICommandHandler<PostDeleteCommand> {
   ) {}
 
   async execute(command: PostDeleteCommand) {
-    const blog = await this.blogsRepository.findBlogWithOwner(command.blogId);
+    const blog = await this.blogsRepository.findBlogWithOwner(+command.blogId);
 
     if (!blog) {
       return {
@@ -37,7 +37,7 @@ export class PostDeleteUseCase implements ICommandHandler<PostDeleteCommand> {
       };
     }
 
-    const post = await this.postsRepository.findPostSQL(command.postId);
+    const post = await this.postsRepository.findPostSQL(+command.postId);
 
     if (!post) {
       return {

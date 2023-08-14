@@ -21,7 +21,7 @@ export class PostCreateUseCase implements ICommandHandler<PostCreateCommand> {
   ) {}
 
   async execute(command: PostCreateCommand) {
-    const blog = await this.blogsRepository.findBlogWithOwner(command.blogId);
+    const blog = await this.blogsRepository.findBlogWithOwner(+command.blogId);
 
     if (!blog) {
       return {

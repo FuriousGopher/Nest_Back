@@ -11,7 +11,7 @@ export class BannedUsersQueryParamsDto {
       return 'DESC';
     }
   })
-  sortDirection: 'ASC' | 'DESC' = 'DESC';
+  sortDirection: 'DESC';
 
   pageNumber: number;
   pageSize: number;

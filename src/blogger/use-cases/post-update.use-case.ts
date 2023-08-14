@@ -30,7 +30,7 @@ export class PostUpdateUseCase implements ICommandHandler<PostUpdateCommand> {
   async execute(
     command: PostUpdateCommand,
   ): Promise<ExceptionResultType<boolean>> {
-    const blog = await this.blogsRepository.findBlogWithOwner(command.blogId);
+    const blog = await this.blogsRepository.findBlogWithOwner(+command.blogId);
 
     if (!blog) {
       return {
@@ -41,7 +41,7 @@ export class PostUpdateUseCase implements ICommandHandler<PostUpdateCommand> {
       };
     }
 
-    const post = await this.postsRepository.findPostSQL(command.postId);
+    const post = await this.postsRepository.findPostSQL(+command.postId);
 
     if (!post) {
       return {
