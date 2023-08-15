@@ -125,7 +125,7 @@ export class BloggerController {
   async createPost(
     @Body() createPostDto: createPostByBlogIdDto,
     @Param('id') id: string,
-    @UserIdFromHeaders() userId: string,
+    @UserIdFromHeaders() userId,
   ) {
     const result = await this.commandBus.execute(
       new PostCreateCommand(createPostDto, id, +userId),

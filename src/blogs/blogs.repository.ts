@@ -9,7 +9,6 @@ import { PostMongo, PostDocument } from '../db/schemas/posts.schema';
 import { PostsRepository } from '../posts/posts.repository';
 import { PostsQueryParamsDto } from 'src/posts/dto/posts-query-params.dto';
 import { CreateBlogDto } from './dto/create-blog.dto';
-import { BannedUsersQueryParamsDto } from '../blogger/dto/banned-users-query-params.dto';
 import { UserMongo, UserDocument } from '../db/schemas/users.schema';
 import { BanUserForBlogDto } from '../sa/dto/ban-user-for-blog.dto';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
@@ -18,7 +17,6 @@ import { Blog } from './entities/blog.entity';
 import { Paginator } from '../utils/paginator';
 import { BlogBan } from './entities/blog-ban.entity';
 import { Post } from '../posts/entities/post.entity';
-import { UserQueryParamsDto } from '../sa/dto/userQueryParams.dto';
 
 @Injectable()
 export class BlogsRepository {
@@ -404,10 +402,7 @@ export class BlogsRepository {
     return result;
   }
 
-  async findAllOwenBlogsPagination(
-    queryParams: BlogsQueryParamsDto,
-    userId: number,
-  ) {
+  async findAllOwenBlogs(queryParams: BlogsQueryParamsDto, userId: number) {
     const query: BlogsQueryParamsDto = {
       pageSize: Number(queryParams.pageSize) || 10,
       pageNumber: Number(queryParams.pageNumber) || 1,
@@ -425,7 +420,7 @@ export class BlogsRepository {
         userId: userId,
       })
       .leftJoinAndSelect('b.user', 'u')
-      .orderBy(`b.${query.sortBy}`, query.sortDirection)
+      .orderBy('b.${query.sortBy}', query.sortDirection)
       .skip((query.pageNumber - 1) * query.pageSize)
       .take(query.pageSize)
       .getMany();

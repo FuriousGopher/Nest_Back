@@ -250,7 +250,7 @@ export class PostsRepository {
       .exec();
   }
 
-  async findOneWithMapping(postId: number, userId: number) {
+  async findOneWithMapping(postId: string, userId?: number) {
     try {
       const posts = await this.postsRepository
         .createQueryBuilder('p')
@@ -321,7 +321,6 @@ export class PostsRepository {
         .leftJoinAndSelect('b.user', 'u')
         .leftJoinAndSelect('u.userBanBySA', 'ubsa')
         .getRawMany();
-      console.log(posts);
 
       const mappedPosts = await this.postsMapping(posts);
       return mappedPosts[0];
