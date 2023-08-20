@@ -26,6 +26,7 @@ import { CommentMongo, CommentSchema } from '../db/schemas/comments.schema';
 import { Comment } from '../comments/entities/comment.entity';
 import { UsersGetBannedUseCase } from './use-cases/users-get-banned.use-case';
 import { BloggerBanUserUseCase } from './use-cases/user-ban.use-case';
+import { CommentLike } from '../comments/entities/comment-like.entity';
 
 const useCases = [
   BlogBanUseCase,
@@ -38,16 +39,12 @@ const useCases = [
   PostDeleteUseCase,
   UsersGetBannedUseCase,
   BloggerBanUserUseCase,
-  /*CommentCreateUseCase,
-  CommentUpdateUseCase,
-  CommentDeleteUseCase,
+  /*
   LikeUpdateForPostUseCase,
-  LikeUpdateForCommentUseCase,
-  ,
-,*/
+  */
 ];
 
-const entities = [User, Comment];
+const entities = [User, Comment, CommentLike];
 @Module({
   imports: [
     MongooseModule.forFeature([

@@ -22,10 +22,19 @@ import { UserIdFromHeaders } from '../decorators/user-id-from-headers.decorator'
 import { JwtBearerGuard } from '../auth/guards/jwt-bearer.guard';
 import { BasicAuthGuard } from '../auth/guards/basic-auth.guard';
 import { LikesDto } from './dto/like-status.dto';
+import { CommandBus } from '@nestjs/cqrs';
+import { CommentCreateCommand } from '../comments/use-cases/comment-create.use-case';
+import { CommentRepository } from '../comments/comment.repository';
+import { LikeUpdateForPostCommand } from './use-cases/like-update-for-post-use.case';
+import { postIDField, postNotFound } from '../exceptions/exception.constants';
 
 @Controller('posts')
 export class PostsController {
-  constructor(private readonly postsService: PostsService) {}
+  constructor(
+    private readonly postsService: PostsService,
+    private commandBus: CommandBus,
+    private readonly commentRepository: CommentRepository,
+  ) {}
 
   @UseGuards(BasicAuthGuard)
   @Post()
@@ -80,6 +89,25 @@ export class PostsController {
     }
   }
 
+  @UseGuards(JwtBearerGuard)
+  @Put(':id/like-status')
+  @HttpCode(204)
+  async makeLikeStatus(
+    @Param('id') postId: string,
+    @Body() likeStatusDto: LikesDto,
+    @UserIdFromHeaders() userId,
+  ) {
+    const result = await this.commandBus.execute(
+      new LikeUpdateForPostCommand(likeStatusDto, postId, userId),
+    );
+
+    if (!result) {
+      return exceptionHandler(ResultCode.NotFound, 'Post not found', 'id');
+    }
+
+    return result;
+  }
+
   @UseGuards(BasicAuthGuard)
   @HttpCode(204)
   @Delete(':id')
@@ -103,30 +131,15 @@ export class PostsController {
     @Body() createCommentDto: CreateCommentDto,
     @UserIdFromHeaders() userId: any,
   ) {
-    const checkBanStatus = await this.postsService.checkIfBanned(
-      userId,
-      postId,
+    const result = await this.commandBus.execute(
+      new CommentCreateCommand(createCommentDto, postId, userId),
     );
-    if (!checkBanStatus) {
-      return exceptionHandler(
-        ResultCode.Forbidden,
-        `You are banned from this blog`,
-        'id',
-      );
+
+    if (result.code !== ResultCode.Success) {
+      return exceptionHandler(result.code, result.message, result.field);
     }
-    const resultCreated = await this.postsService.createComment(
-      postId,
-      createCommentDto,
-      userId,
-    );
-    if (!resultCreated) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        `Post with this ${postId} not found`,
-        'id',
-      );
-    }
-    return resultCreated;
+
+    return this.commentRepository.findByIdSQL(result.response, userId);
   }
 
   @Get(':id/comments')
@@ -144,29 +157,6 @@ export class PostsController {
       return exceptionHandler(
         ResultCode.NotFound,
         `Post with this ${id} not found`,
-        'id',
-      );
-    }
-    return result;
-  }
-
-  @UseGuards(JwtBearerGuard)
-  @Put(':id/like-status')
-  @HttpCode(204)
-  async makeLikeStatus(
-    @Param('id') id: string,
-    @Body() likeStatusDto: LikesDto,
-    @UserIdFromHeaders() userId,
-  ) {
-    const result = await this.postsService.putNewLikeStatus(
-      id,
-      likeStatusDto,
-      userId,
-    );
-    if (!result) {
-      return exceptionHandler(
-        ResultCode.NotFound,
-        'Post with this id not found',
         'id',
       );
     }

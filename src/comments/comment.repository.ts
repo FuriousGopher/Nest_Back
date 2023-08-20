@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { CommentMongo, CommentDocument } from '../db/schemas/comments.schema';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { CommentsQueryParamsDto } from '../posts/dto/comments-query-params.dto';
 import { SaRepository } from '../sa/sa.repository';
 import { PostsQueryParamsDto } from '../posts/dto/posts-query-params.dto';
 import { CommentLike } from './entities/comment-like.entity';
 import { Paginator } from '../utils/paginator';
 import { LikeStatus } from '../enums/like-status.enum';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Comment } from './entities/comment.entity';
 
 @Injectable()
@@ -19,69 +19,100 @@ export class CommentRepository {
     private commentModel: Model<CommentDocument>,
     protected saRepository: SaRepository,
     @InjectRepository(Comment) private commentsRepository: Repository<Comment>,
+    @InjectDataSource() private dataSource: DataSource,
+    @InjectRepository(CommentLike)
+    private readonly commentLikesRepository: Repository<CommentLike>,
   ) {}
 
   async save(newComment: CommentDocument) {
     return newComment.save();
   }
 
-  async findById(id: string, userId: string) {
-    const result: CommentMongo | null = await this.commentModel
-      .findOne({ _id: id })
-      .lean();
-
-    if (!result) return false;
-
-    const checkBanStatus = await this.saRepository.checkUserBanStatus(
-      result.commentatorInfo.userId,
-    );
-
-    if (!checkBanStatus) {
-      return false;
+  async findComment(commentId: string) {
+    try {
+      return await this.commentsRepository
+        .createQueryBuilder('c')
+        .where(`c.id = :commentId`, {
+          commentId: commentId,
+        })
+        .leftJoinAndSelect('c.user', 'u')
+        .getOne();
+    } catch (e) {
+      console.log(e);
+      return null;
     }
-    let status;
+  }
 
-    const usersWithReactionForComment = result.likesInfo.users;
+  async findByIdSQL(commentId: number, userId: number) {
+    try {
+      const comments = await this.commentsRepository
+        .createQueryBuilder('c')
+        .addSelect(
+          (qb) =>
+            qb
+              .select(`count(*)`)
+              .from(CommentLike, 'cl')
+              .leftJoin('cl.user', 'u')
+              .leftJoin('u.userBanBySA', 'ubsa')
+              .where('cl.commentId = c.id')
+              .andWhere('ubsa.isBanned = false')
+              .andWhere(`cl.likeStatus = 'Like'`),
+          'likes_count',
+        )
+        .addSelect(
+          (qb) =>
+            qb
+              .select(`count(*)`)
+              .from(CommentLike, 'cl')
+              .leftJoin('cl.user', 'u')
+              .leftJoin('u.userBanBySA', 'ubsa')
+              .where('cl.commentId = c.id')
+              .andWhere('ubsa.isBanned = false')
+              .andWhere(`cl.likeStatus = 'Dislike'`),
+          'dislikes_count',
+        )
+        .addSelect(
+          (qb) =>
+            qb
+              .select('cl.likeStatus')
+              .from(CommentLike, 'cl')
+              .where('cl.commentId = c.id')
+              .andWhere('cl.userId = :userId', { userId: userId }),
+          'like_status',
+        )
+        .where(`c.id = :commentId`, {
+          commentId: commentId,
+        })
+        .andWhere(`ubsa.isBanned = false`)
+        .leftJoinAndSelect('c.user', 'u')
+        .leftJoinAndSelect('u.userBanBySA', 'ubsa')
+        .getRawMany();
 
-    if (userId) {
-      status = usersWithReactionForComment.find(
-        (u) => u.userId === userId,
-      )?.likeStatus;
+      const mappedComments = await this.commentsMapping(comments);
+      return mappedComments[0];
+    } catch (e) {
+      console.log(e);
+      return null;
     }
+  }
 
-    const usersIdsWithReactionForComment = usersWithReactionForComment.map(
-      (u) => new Types.ObjectId(u.userId),
-    );
-
-    const bannedUsers = await this.saRepository.findBannedUsersFromArrayOfIds(
-      usersIdsWithReactionForComment,
-    );
-
-    const allowedUsers = usersWithReactionForComment.filter(
-      (u) => !bannedUsers.includes(u.userId),
-    );
-
-    const likesCountCheck = allowedUsers.filter(
-      (u) => u.likeStatus === 'Like',
-    ).length;
-    const dislikeCountCheck = allowedUsers.filter(
-      (u) => u.likeStatus === 'Dislike',
-    ).length;
-
-    return {
-      id: result.id,
-      content: result.content,
-      commentatorInfo: {
-        userId: result.commentatorInfo.userId,
-        userLogin: result.commentatorInfo.userLogin,
-      },
-      createdAt: result.createdAt,
-      likesInfo: {
-        likesCount: +likesCountCheck,
-        dislikesCount: +dislikeCountCheck,
-        myStatus: status || 'None',
-      },
-    };
+  private async commentsMapping(comments: any[]) {
+    return comments.map((c) => {
+      return {
+        id: c.c_id.toString(),
+        content: c.c_content,
+        commentatorInfo: {
+          userId: c.u_id.toString(),
+          userLogin: c.u_login,
+        },
+        createdAt: c.c_created_at,
+        likesInfo: {
+          likesCount: Number(c.likes_count),
+          dislikesCount: Number(c.dislikes_count),
+          myStatus: c.like_status || LikeStatus.None,
+        },
+      };
+    });
   }
 
   async findOne(id: string) {
@@ -313,5 +344,33 @@ export class CommentRepository {
         },
       };
     });
+  }
+
+  async dataSourceSave(entity: Comment | CommentLike) {
+    return this.dataSource.manager.save(entity);
+  }
+
+  async deleteCommentSQL(commentId: number): Promise<boolean> {
+    const result = await this.commentsRepository
+      .createQueryBuilder('c')
+      .delete()
+      .from(Comment)
+      .where('id = :commentId', { commentId: commentId })
+      .execute();
+    return result.affected === 1;
+  }
+
+  async findUserCommentLikeRecord(commentId: number, userId: number) {
+    return this.commentLikesRepository
+      .createQueryBuilder('cl')
+      .where(`c.id = :commentId`, {
+        commentId: commentId,
+      })
+      .andWhere(`u.id = :userId`, {
+        userId: userId,
+      })
+      .leftJoinAndSelect('cl.comment', 'c')
+      .leftJoinAndSelect('cl.user', 'u')
+      .getOne();
   }
 }

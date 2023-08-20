@@ -17,7 +17,7 @@ export class Comment {
   id: number;
 
   @Column({ type: 'varchar', width: 300 })
-  content: string;
+  content: string | undefined;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
   createdAt: Date;

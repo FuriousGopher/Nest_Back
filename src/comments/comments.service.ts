@@ -10,7 +10,7 @@ export class CommentsService {
   async updateLikeStatus(id: string, likesDto: LikesDto, userId: string) {
     const user = await this.commentRepository.findUserInLikesInfo(id, userId);
 
-    const foundComment = await this.commentRepository.findById(id, userId);
+    const foundComment = await this.commentRepository.findByIdSQL(+id, +userId);
     if (!foundComment) return false;
 
     const like = likesDto.likeStatus;
@@ -96,8 +96,8 @@ export class CommentsService {
     return await this.commentRepository.findOne(id);
   }
 
-  async findOne(id: string, userId: string) {
-    return await this.commentRepository.findById(id, userId);
+  async findOne(id: number, userId: string) {
+    return await this.commentRepository.findByIdSQL(+id, +userId);
   }
 
   async checkOwner(commentId: string, userId: string) {

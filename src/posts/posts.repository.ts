@@ -13,7 +13,6 @@ import { Post } from './entities/post.entity';
 import { DataSource, Repository } from 'typeorm';
 import { PostLike } from './entities/post-like.entity';
 import { LikeStatus } from '../enums/like-status.enum';
-import { CommentLike } from '../comments/entities/comment-like.entity';
 
 @Injectable()
 export class PostsRepository {
@@ -24,6 +23,8 @@ export class PostsRepository {
     private commentModel: Model<CommentDocument>,
     protected saRepository: SaRepository,
     @InjectRepository(Post) private postsRepository: Repository<Post>,
+    @InjectRepository(PostLike)
+    private readonly postLikesRepository: Repository<PostLike>,
     @InjectDataSource() private dataSource: DataSource,
   ) {}
 
@@ -476,5 +477,22 @@ export class PostsRepository {
       .where('id = :postId', { postId: postId })
       .execute();
     return result.affected === 1;
+  }
+
+  async findUserPostLikeRecord(
+    postId: number,
+    userId: number,
+  ): Promise<PostLike | null> {
+    return this.postLikesRepository
+      .createQueryBuilder('pl')
+      .where(`p.id = :postId`, {
+        postId: postId,
+      })
+      .andWhere(`u.id = :userId`, {
+        userId: userId,
+      })
+      .leftJoinAndSelect('pl.post', 'p')
+      .leftJoinAndSelect('pl.user', 'u')
+      .getOne();
   }
 }

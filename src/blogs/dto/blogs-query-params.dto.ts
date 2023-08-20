@@ -2,7 +2,7 @@ import { IsOptional } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class BlogsQueryParamsDto {
-  searchNameTerm: string | null;
+  searchNameTerm: string;
   sortBy: string;
 
   @IsOptional()

@@ -16,7 +16,6 @@ import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Blog } from './entities/blog.entity';
 import { Paginator } from '../utils/paginator';
 import { BlogBan } from './entities/blog-ban.entity';
-import { Post } from '../posts/entities/post.entity';
 
 @Injectable()
 export class BlogsRepository {
@@ -27,7 +26,6 @@ export class BlogsRepository {
     @Inject(PostsRepository)
     protected postsRepositoryM: PostsRepository,
     @InjectRepository(Blog) private blogsRepository: Repository<Blog>,
-    @InjectRepository(Post) private postRepository: Repository<Post>,
     @InjectDataSource() private dataSource: DataSource,
   ) {}
 
@@ -350,8 +348,8 @@ export class BlogsRepository {
       .leftJoinAndSelect('b.blogBan', 'bb')
       .leftJoinAndSelect('b.user', 'u')
       .orderBy(`b.${query.sortBy}`, query.sortDirection)
-      .skip((query.pageNumber - 1) * query.pageSize)
-      .take(query.pageSize)
+      .offset((query.pageNumber - 1) * query.pageSize)
+      .limit(query.pageSize)
       .getMany();
 
     const totalCount = await this.blogsRepository
@@ -408,7 +406,7 @@ export class BlogsRepository {
       pageNumber: Number(queryParams.pageNumber) || 1,
       sortBy: queryParams.sortBy ?? 'createdAt',
       sortDirection: queryParams.sortDirection ?? 'DESC',
-      searchNameTerm: queryParams.searchNameTerm ?? '',
+      searchNameTerm: queryParams.searchNameTerm ?? null,
     };
 
     const blogs = await this.blogsRepository
@@ -543,7 +541,7 @@ export class BlogsRepository {
       pageNumber: Number(queryParams.pageNumber) || 1,
       sortBy: queryParams.sortBy ?? 'createdAt',
       sortDirection: queryParams.sortDirection ?? 'DESC',
-      searchNameTerm: queryParams.searchNameTerm ?? '',
+      searchNameTerm: queryParams.searchNameTerm ?? null,
     };
     const blogs = await this.blogsRepository
       .createQueryBuilder('b')

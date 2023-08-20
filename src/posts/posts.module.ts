@@ -28,6 +28,10 @@ import { UserBanBySA } from '../auth/entities/user-ban-by-sa.entity';
 import { Blog } from '../blogs/entities/blog.entity';
 import { Post } from './entities/post.entity';
 import { Comment } from '../comments/entities/comment.entity';
+import { CommentLike } from '../comments/entities/comment-like.entity';
+import { CommentCreateCommand } from '../comments/use-cases/comment-create.use-case';
+import { LikeUpdateForPostCommand } from './use-cases/like-update-for-post-use.case';
+import { PostLike } from './entities/post-like.entity';
 
 const strategies = [
   BasicStrategy,
@@ -45,7 +49,11 @@ const entities = [
   Blog,
   Post,
   Comment,
+  CommentLike,
+  PostLike,
 ];
+
+const useCases = [CommentCreateCommand, LikeUpdateForPostCommand];
 
 @Module({
   imports: [
@@ -69,6 +77,7 @@ const entities = [
     ...strategies,
     IsBlogExistConstraint,
     SaRepository,
+    ...useCases,
   ],
   exports: [PostsRepository, PostsService],
 })

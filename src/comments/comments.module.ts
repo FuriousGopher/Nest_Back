@@ -18,6 +18,10 @@ import { TokenParserMiddleware } from '../middlewares/token-parser.middleware';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../auth/entities/user.entity';
 import { Comment } from './entities/comment.entity';
+import { CommentDeleteUseCase } from './use-cases/comment-delete.use-case';
+import { CommentUpdateUseCase } from './use-cases/comment-update.use-case';
+import { LikeUpdateForCommentUseCase } from './use-cases/like-update-for-comment-use.case';
+import { CommentLike } from './entities/comment-like.entity';
 
 const strategies = [
   BasicStrategy,
@@ -26,7 +30,13 @@ const strategies = [
   JwtRefreshTokenStrategy,
 ];
 
-const entities = [User, Comment];
+const useCases = [
+  CommentUpdateUseCase,
+  CommentDeleteUseCase,
+  LikeUpdateForCommentUseCase,
+];
+
+const entities = [User, Comment, CommentLike];
 @Module({
   imports: [
     PassportModule,
@@ -41,7 +51,13 @@ const entities = [User, Comment];
     TypeOrmModule.forFeature([...entities]),
   ],
   controllers: [CommentsController],
-  providers: [CommentsService, ...strategies, CommentRepository, ConfigService],
+  providers: [
+    CommentsService,
+    ...strategies,
+    CommentRepository,
+    ConfigService,
+    ...useCases,
+  ],
   exports: [CommentRepository],
 })
 export class CommentsModule implements NestModule {
