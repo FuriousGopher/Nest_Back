@@ -38,7 +38,7 @@ import { UserPasswordRecovery } from '../auth/entities/user-password-recovery.en
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
         synchronize: true,
-        logging: true,
+        autoLoadEntities: true,
         entities: [
           User,
           Post,

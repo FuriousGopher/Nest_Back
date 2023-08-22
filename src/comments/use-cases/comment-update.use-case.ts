@@ -18,11 +18,11 @@ export class CommentUpdateUseCase
   constructor(private readonly commentsRepository: CommentRepository) {}
 
   async execute(command: CommentUpdateCommand) {
-    const comment = await this.commentsRepository.findComment(
+    const postComment = await this.commentsRepository.findComment(
       command.commentId,
     );
 
-    if (!comment) {
+    if (!postComment) {
       return {
         data: false,
         code: ResultCode.NotFound,
@@ -31,15 +31,15 @@ export class CommentUpdateUseCase
       };
     }
 
-    if (comment.user.id !== command.userId) {
+    if (postComment.user.id !== command.userId) {
       return {
         data: false,
         code: ResultCode.Forbidden,
       };
     }
 
-    comment.content = command.commentInputDto.content;
-    await this.commentsRepository.dataSourceSave(comment);
+    postComment.content = command.commentInputDto.content as any;
+    await this.commentsRepository.dataSourceSave(postComment);
 
     return {
       data: true,

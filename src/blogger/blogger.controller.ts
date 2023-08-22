@@ -93,11 +93,11 @@ export class BloggerController {
   @Get('blogs/comments')
   async findAllComments(
     @Query() queryParams: PostsQueryParamsDto,
-    @UserIdFromHeaders() userId: string,
+    @UserIdFromHeaders() userId,
   ) {
     const result = await this.commentRepository.findAllCommentsSQL(
       queryParams,
-      +userId,
+      userId,
     );
     if (!result) {
       return exceptionHandler(ResultCode.NotFound, 'Comments not found', 'id');

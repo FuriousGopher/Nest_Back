@@ -29,8 +29,14 @@ import { Blog } from '../blogs/entities/blog.entity';
 import { Post } from './entities/post.entity';
 import { Comment } from '../comments/entities/comment.entity';
 import { CommentLike } from '../comments/entities/comment-like.entity';
-import { CommentCreateCommand } from '../comments/use-cases/comment-create.use-case';
-import { LikeUpdateForPostCommand } from './use-cases/like-update-for-post-use.case';
+import {
+  CommentCreateCommand,
+  CommentCreateUseCase,
+} from '../comments/use-cases/comment-create.use-case';
+import {
+  LikeUpdateForPostCommand,
+  LikeUpdateForPostUseCase,
+} from './use-cases/like-update-for-post-use.case';
 import { PostLike } from './entities/post-like.entity';
 
 const strategies = [
@@ -53,7 +59,7 @@ const entities = [
   PostLike,
 ];
 
-const useCases = [CommentCreateCommand, LikeUpdateForPostCommand];
+const useCases = [CommentCreateUseCase, LikeUpdateForPostUseCase];
 
 @Module({
   imports: [

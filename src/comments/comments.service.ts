@@ -96,8 +96,8 @@ export class CommentsService {
     return await this.commentRepository.findOne(id);
   }
 
-  async findOne(id: number, userId: string) {
-    return await this.commentRepository.findByIdSQL(+id, +userId);
+  async findOne(id: number, userId: number) {
+    return await this.commentRepository.findByIdSQL(id, userId);
   }
 
   async checkOwner(commentId: string, userId: string) {

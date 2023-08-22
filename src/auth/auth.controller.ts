@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { RecoveryEmailDto } from './dto/recoveryEmail.dto';
 import { NewPasswordDto } from './dto/new-password.dto';
 import { ConfirmationCodeDto } from './dto/confirmation-code.dto';
@@ -25,17 +24,9 @@ import { RefreshToken } from '../decorators/refresh-token.decorator';
 import { SaRepository } from '../sa/sa.repository';
 import { exceptionHandler } from '../exceptions/exception.handler';
 import { ResultCode } from '../enums/result-code.enum';
-import {
-  confirmCodeField,
-  confirmCodeIsIncorrect,
-  emailField,
-  userNotFoundOrConfirmed,
-} from '../exceptions/exception.constants';
-import { SecurityService } from '../security/security.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserIdFromHeaders } from '../decorators/user-id-from-headers.decorator';
 import { JwtBearerGuard } from './guards/jwt-bearer.guard';
-import { ThrottleLogin } from '../decorators/throttle.decorator';
 import { RegistrationCommand } from './use-cases/registration/registration.use-case';
 import { RegistrationConfirmationCommand } from './use-cases/registration/registration-confirmation.use-case';
 import { RegistrationEmailResendCommand } from './use-cases/registration/registration-email-resend.use-case';
@@ -53,14 +44,18 @@ export class AuthController {
   ) {}
 
   @HttpCode(204)
+  /*
   @UseGuards(ThrottlerGuard)
+  */
   @Post('registration')
   async registration(@Body() registrationDto: RegistrationDto) {
     return this.commandBus.execute(new RegistrationCommand(registrationDto));
   }
 
   @HttpCode(204)
+  /*
   @UseGuards(ThrottlerGuard)
+*/
   @Post('registration-confirmation') /// work
   async confirmationOfEmail(@Body() confirmationCode: ConfirmationCodeDto) {
     const result = await this.commandBus.execute(
@@ -76,7 +71,9 @@ export class AuthController {
     return result;
   }
 
+  /*
   @UseGuards(ThrottlerGuard)
+  */
   @Post('registration-email-resending') /// work
   @HttpCode(204)
   async emailResending(@Body() emailResendingDto: RecoveryEmailDto) {
@@ -96,14 +93,18 @@ export class AuthController {
   }
 
   @HttpCode(204)
+  /*
   @UseGuards(ThrottlerGuard)
+  */
   @Post('password-recovery') //work
   async pasRecovery(@Body() recoveryDto: RecoveryEmailDto) {
     return;
   }
 
   @HttpCode(204)
+  /*
   @UseGuards(ThrottlerGuard)
+*/
   @Post('new-password') //work
   async newPas(@Body() newPasswordDto: NewPasswordDto) {
     return await this.authService.newPas(
@@ -112,7 +113,7 @@ export class AuthController {
     );
   }
 
-  @UseGuards(ThrottlerGuard, LocalAuthGuard)
+  @UseGuards(/*ThrottlerGuard*/ LocalAuthGuard)
   @Post('login')
   @HttpCode(200)
   async login(
@@ -149,8 +150,6 @@ export class AuthController {
     @RefreshToken() refreshToken,
     @Res({ passthrough: true }) res: Response,
   ) {
-    console.log('refreshToken', refreshToken);
-    console.log('userId', userId);
     const userAgent = headers['user-agent'] || 'unknown';
     const decodedToken: any = this.jwtService.decode(refreshToken);
     const deviceId = decodedToken.deviceId;

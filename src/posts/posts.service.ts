@@ -150,7 +150,7 @@ export class PostsService {
     queryParams: CommentsQueryParamsDto,
     userId: string,
   ) {
-    const findPost = await this.postsRepository.findOne(id);
+    const findPost = await this.postsRepository.findPostSQL(+id);
 
     if (!findPost) return false;
 

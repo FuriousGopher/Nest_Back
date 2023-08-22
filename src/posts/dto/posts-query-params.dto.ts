@@ -2,7 +2,7 @@ import { IsOptional } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class PostsQueryParamsDto {
-  sortBy = 'createdAt';
+  sortBy: string;
 
   @IsOptional()
   @Transform(({ value }) => {
@@ -17,6 +17,6 @@ export class PostsQueryParamsDto {
   })
   sortDirection: any;
 
-  pageNumber = 1;
-  pageSize = 10;
+  pageNumber: number;
+  pageSize: number;
 }

@@ -12,7 +12,7 @@ import { CreateBlogDto } from './dto/create-blog.dto';
 import { UserMongo, UserDocument } from '../db/schemas/users.schema';
 import { BanUserForBlogDto } from '../sa/dto/ban-user-for-blog.dto';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager, Raw, Repository } from 'typeorm';
 import { Blog } from './entities/blog.entity';
 import { Paginator } from '../utils/paginator';
 import { BlogBan } from './entities/blog-ban.entity';
@@ -340,26 +340,29 @@ export class BlogsRepository {
       pageSize: Number(queryParams.pageSize) || 10,
     };
 
-    const blogs = await this.blogsRepository
-      .createQueryBuilder('b')
-      .where(`${query.searchNameTerm ? 'b.name ilike :nameTerm' : ''}`, {
+    const whereConditions: any = {};
+    if (query.searchNameTerm) {
+      whereConditions.name = Raw((alias) => `${alias} ilike :nameTerm`, {
         nameTerm: `%${query.searchNameTerm}%`,
-      })
-      .leftJoinAndSelect('b.blogBan', 'bb')
-      .leftJoinAndSelect('b.user', 'u')
-      .orderBy(`b.${query.sortBy}`, query.sortDirection)
-      .offset((query.pageNumber - 1) * query.pageSize)
-      .limit(query.pageSize)
-      .getMany();
+      });
+    }
 
-    const totalCount = await this.blogsRepository
-      .createQueryBuilder('b')
-      .where(`${query.searchNameTerm ? 'b.name ilike :nameTerm' : ''}`, {
-        nameTerm: `%${query.searchNameTerm}%`,
-      })
-      .leftJoinAndSelect('b.blogBan', 'bb')
-      .leftJoinAndSelect('b.user', 'u')
-      .getCount();
+    const blogs = await this.blogsRepository.find({
+      relations: {
+        blogBan: true,
+        user: true,
+      },
+      where: whereConditions,
+      order: {
+        [query.sortBy]: query.sortDirection,
+      },
+      skip: (query.pageNumber - 1) * query.pageSize,
+      take: query.pageSize,
+    });
+
+    const totalCount = await this.blogsRepository.count({
+      where: whereConditions,
+    });
 
     return Paginator.paginate({
       pageNumber: query.pageNumber,
@@ -418,7 +421,7 @@ export class BlogsRepository {
         userId: userId,
       })
       .leftJoinAndSelect('b.user', 'u')
-      .orderBy('b.${query.sortBy}', query.sortDirection)
+      .orderBy(`b.${query.sortBy}`, query.sortDirection)
       .skip((query.pageNumber - 1) * query.pageSize)
       .take(query.pageSize)
       .getMany();
