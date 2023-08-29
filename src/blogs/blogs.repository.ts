@@ -29,71 +29,6 @@ export class BlogsRepository {
     @InjectDataSource() private dataSource: DataSource,
   ) {}
 
-  async findAllBlogs(
-    queryParams: BlogsQueryParamsDto,
-  ): Promise<BlogsResponseDto | boolean> {
-    try {
-      const {
-        searchNameTerm = null,
-        sortBy = 'createdAt',
-        sortDirection = 'desc',
-        pageNumber = 1,
-        pageSize = 10,
-      } = queryParams;
-
-      const skipCount = (pageNumber - 1) * pageSize;
-      const filter: any = {};
-
-      const bannedBlogs = await this.blogModel
-        .find({ 'banInfo.isBanned': true })
-        .select('id')
-        .exec();
-
-      const bannedBlogIds = bannedBlogs.map((blog) => blog._id.toString());
-
-      if (searchNameTerm) {
-        filter['name'] = {
-          $regex: searchNameTerm,
-          $options: 'i',
-        };
-      }
-
-      if (bannedBlogIds.length > 0) {
-        filter._id = { $nin: bannedBlogIds };
-      }
-
-      const totalCount = await this.blogModel.countDocuments(filter).exec();
-      const totalPages = Math.ceil(totalCount / pageSize);
-
-      const blogs = await this.blogModel
-        .find(filter)
-        .sort({ [sortBy]: sortDirection === 'desc' ? -1 : 1 })
-        .skip(skipCount)
-        .limit(pageSize)
-        .exec();
-
-      const blogsViewModels = blogs.map((blog) => ({
-        id: blog._id.toString(),
-        name: blog.name,
-        description: blog.description,
-        websiteUrl: blog.websiteUrl,
-        createdAt: blog.createdAt,
-        isMembership: blog.isMembership,
-      }));
-
-      return {
-        pagesCount: totalPages,
-        page: +pageNumber,
-        pageSize: +pageSize,
-        totalCount: totalCount,
-        items: blogsViewModels,
-      };
-    } catch (e) {
-      console.error('An error occurred while getting all blogs', e);
-      return false;
-    }
-  }
-
   async create(createBlogDto: CreateBlogDto) {
     try {
       const ownerId = 'test potom peredelat';
@@ -266,71 +201,6 @@ export class BlogsRepository {
     };
   }
 
-  async bindBlog(id: string, userId: string, userLogin: string) {
-    return this.blogModel.findByIdAndUpdate(
-      { _id: id },
-      {
-        'blogOwnerInfo.userId': userId,
-        'blogOwnerInfo.userLogin': userLogin,
-      },
-    );
-  }
-
-  async findAllBlogsForSA(queryParams: BlogsQueryParamsDto) {
-    const {
-      searchNameTerm = null,
-      sortBy = 'createdAt',
-      sortDirection = 'desc',
-      pageNumber = 1,
-      pageSize = 10,
-    } = queryParams;
-
-    const skipCount = (pageNumber - 1) * pageSize;
-    const filter: any = {};
-
-    if (searchNameTerm) {
-      filter['name'] = {
-        $regex: searchNameTerm,
-        $options: 'i',
-      };
-    }
-
-    const totalCount = await this.blogModel.countDocuments(filter).exec();
-    const totalPages = Math.ceil(totalCount / pageSize);
-
-    const blogs = await this.blogModel
-      .find(filter)
-      .sort({ [sortBy]: sortDirection === 'desc' ? -1 : 1 })
-      .skip(skipCount)
-      .limit(pageSize)
-      .exec();
-
-    const blogsViewModels = blogs.map((blog) => ({
-      id: blog._id.toString(),
-      name: blog.name,
-      description: blog.description,
-      websiteUrl: blog.websiteUrl,
-      createdAt: blog.createdAt,
-      isMembership: blog.isMembership,
-      blogOwnerInfo: {
-        userId: blog.blogOwnerInfo.userId,
-        userLogin: blog.blogOwnerInfo.userLogin,
-      },
-      banInfo: {
-        isBanned: blog.banInfo.isBanned,
-        banDate: blog.banInfo.banDate,
-      },
-    }));
-
-    return {
-      pagesCount: totalPages,
-      page: +pageNumber,
-      pageSize: +pageSize,
-      totalCount: totalCount,
-      items: blogsViewModels,
-    };
-  }
-
   async findBlogsForSASQL(queryParams: BlogsQueryParamsDto) {
     const query: BlogsQueryParamsDto = {
       searchNameTerm: queryParams.searchNameTerm ?? null,
@@ -391,16 +261,6 @@ export class BlogsRepository {
         },
       };
     });
-  }
-
-  async findAllOwnBlogs(userId: string) {
-    const result = await this.blogModel
-      .find({ 'blogOwnerInfo.userId': userId })
-      .exec();
-    if (!result) {
-      return false;
-    }
-    return result;
   }
 
   async findAllOwenBlogs(queryParams: BlogsQueryParamsDto, userId: number) {

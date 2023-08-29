@@ -5,7 +5,6 @@ import { BlogsRepository } from './blogs.repository';
 import { PostsQueryParamsDto } from 'src/posts/dto/posts-query-params.dto';
 import { BlogsQueryParamsDto } from './dto/blogs-query-params.dto';
 import { createPostByBlogIdDto } from './dto/create-post-byBlogId.dto';
-import { BannedUsersQueryParamsDto } from '../blogger/dto/banned-users-query-params.dto';
 
 @Injectable()
 export class BlogsService {
@@ -20,22 +19,6 @@ export class BlogsService {
 
   findAll(queryParams: BlogsQueryParamsDto) {
     return this.blogsRepository.findAllBlogsSQl(queryParams);
-  }
-
-  async findAllPosts(
-    queryParams: PostsQueryParamsDto,
-    id: string,
-    userId: string,
-  ) {
-    const checkForBlogId = await this.blogsRepository.findByIdSQL(id);
-    if (!checkForBlogId) {
-      return false;
-    }
-    return await this.blogsRepository.findAllPosts(
-      queryParams,
-      checkForBlogId.id,
-      userId,
-    );
   }
 
   async findAllPostsForBlogger(
