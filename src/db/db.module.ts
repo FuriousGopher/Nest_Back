@@ -32,11 +32,7 @@ import { UserPasswordRecovery } from '../auth/entities/user-password-recovery.en
         configService: ConfigService,
       ): Promise<TypeOrmModuleOptions> => ({
         type: 'postgres',
-        host: configService.get('HOST'),
-        port: configService.get('PORT'),
-        username: 'postgres',
-        password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get('DB_NAME'),
+        url: configService.get<string>('URL_CLOUD_DB'),
         synchronize: true,
         autoLoadEntities: true,
         entities: [
